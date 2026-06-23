@@ -277,7 +277,6 @@ function App() {
           <li><a href="#dashboard" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Dashboard</a></li>
           <li><a href="#schedule" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Clases</a></li>
           <li><a href="#pricing" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Planes</a></li>
-          <li><a href="#admin" onClick={() => { setSection('admin'); closeMobileMenu() }} className="nav-link-admin">Admin</a></li>
           <li>
             <button className="btn btn-outline btn-logout" onClick={handleLogout}>
               Cerrar Sesión
