@@ -92,7 +92,8 @@ function App() {
     const loggedInUser = {
       id: profile.id,
       codigo: profile.codigo,
-      nombre: profile.nombre || 'Usuario GymPro'
+      nombre: profile.nombre || 'Usuario GymPro',
+      imagen: profile.imagen || null
     }
     setUser(loggedInUser)
     setSection('dashboard')
@@ -239,7 +240,11 @@ function App() {
                   type="button"
                 >
                   <div className="profile-avatar">
-                    {getInitials(profile.nombre)}
+                    {profile.imagen ? (
+                      <img src={profile.imagen} alt={profile.nombre} className="profile-img" />
+                    ) : (
+                      getInitials(profile.nombre)
+                    )}
                   </div>
                   <span className="profile-name">{profile.nombre}</span>
                 </button>
@@ -276,6 +281,16 @@ function App() {
         </button>
 
         <ul className={`nav-links ${isMobileMenuOpen ? 'active' : ''}`}>
+          <li className="nav-user-info">
+            <div className="nav-avatar">
+              {user?.imagen ? (
+                <img src={user.imagen} alt={user.nombre} className="nav-avatar-img" />
+              ) : (
+                getInitials(user?.nombre)
+              )}
+            </div>
+            <span className="nav-user-name">{user?.nombre}</span>
+          </li>
           <li><a href="#dashboard" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Dashboard</a></li>
           {isAdmin && (
             <>
