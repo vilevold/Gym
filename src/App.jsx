@@ -121,6 +121,8 @@ function App() {
     setError('')
   }
 
+  const isAdmin = user?.codigo === '1212'
+
   // Obtener iniciales del nombre para el avatar
   const getInitials = (name) => {
     if (!name) return 'GP'
@@ -275,8 +277,13 @@ function App() {
 
         <ul className={`nav-links ${isMobileMenuOpen ? 'active' : ''}`}>
           <li><a href="#dashboard" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Dashboard</a></li>
-          <li><a href="#schedule" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Clases</a></li>
-          <li><a href="#pricing" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Planes</a></li>
+          {isAdmin && (
+            <>
+              <li><a href="#clases" onClick={() => { setSection('clases'); closeMobileMenu() }}>Clases</a></li>
+              <li><a href="#planes" onClick={() => { setSection('planes'); closeMobileMenu() }}>Planes</a></li>
+              <li><a href="#admin" className="nav-link-admin" onClick={() => { setSection('admin'); closeMobileMenu() }}>Admin Panel</a></li>
+            </>
+          )}
           <li>
             <button className="btn btn-outline btn-logout" onClick={handleLogout}>
               Cerrar Sesión
@@ -287,6 +294,60 @@ function App() {
 
       {section === 'admin' ? (
         <AdminPanel />
+      ) : section === 'clases' ? (
+        <header className="hero">
+          <span className="badge">📅 Clases</span>
+          <h1 className="hero-title">
+            Horario de <span>Clases</span>
+          </h1>
+          <p className="hero-subtitle">
+            Administra las disciplinas, horarios y entrenadores disponibles.
+          </p>
+          <div className="skeleton-grid" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="skeleton-card">
+              <div className="card-header">
+                <span className="card-icon">📅</span>
+                <span className="card-tag">Estructura</span>
+              </div>
+              <h3 className="card-title">Clases Semanales</h3>
+              <p className="card-description">
+                Aquí podrás gestionar el calendario de clases (CrossFit, Yoga, Zumba, etc.).
+              </p>
+              <div className="skeleton-bar-group">
+                <div className="skeleton-line active"></div>
+                <div className="skeleton-line third"></div>
+                <div className="skeleton-line half"></div>
+              </div>
+            </div>
+          </div>
+        </header>
+      ) : section === 'planes' ? (
+        <header className="hero">
+          <span className="badge">💳 Planes</span>
+          <h1 className="hero-title">
+            Planes de <span>Suscripción</span>
+          </h1>
+          <p className="hero-subtitle">
+            Administra los planes de membresía, precios y beneficios.
+          </p>
+          <div className="skeleton-grid" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="skeleton-card">
+              <div className="card-header">
+                <span className="card-icon">💳</span>
+                <span className="card-tag">Diseño</span>
+              </div>
+              <h3 className="card-title">Suscripciones</h3>
+              <p className="card-description">
+                Aquí podrás gestionar los planes de membresía y precios.
+              </p>
+              <div className="skeleton-bar-group">
+                <div className="skeleton-line"></div>
+                <div className="skeleton-line active"></div>
+                <div className="skeleton-line half"></div>
+              </div>
+            </div>
+          </div>
+        </header>
       ) : (
         <header className="hero">
           <span className="badge">Sesión iniciada como: {user.nombre} ({user.codigo})</span>
