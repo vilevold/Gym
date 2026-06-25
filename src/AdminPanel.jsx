@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
 
 function AdminPanel() {
@@ -11,6 +11,10 @@ function AdminPanel() {
   const [msg, setMsg] = useState({ type: '', text: '' })
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [showCamera, setShowCamera] = useState(false)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
 
   // Membership state
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -20,6 +24,11 @@ function AdminPanel() {
 
   useEffect(() => {
     cargarUsuarios()
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop())
+      }
+    }
   }, [])
 
   const cargarUsuarios = async () => {
@@ -177,6 +186,41 @@ function AdminPanel() {
     cargarUsuarios()
   }
 
+  const abrirCamara = async () => {
+    setShowCamera(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
+      streamRef.current = stream
+      if (videoRef.current) videoRef.current.srcObject = stream
+    } catch {
+      setMsg({ type: 'error', text: 'No se pudo acceder a la cámara.' })
+      setShowCamera(false)
+    }
+  }
+
+  const capturarFoto = () => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas) return
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    canvas.getContext('2d').drawImage(video, 0, 0)
+    canvas.toBlob((blob) => {
+      const file = new File([blob], `captura_${Date.now()}.jpg`, { type: 'image/jpeg' })
+      setPhotoFile(file)
+      setPhotoPreview(URL.createObjectURL(blob))
+      cerrarCamara()
+    }, 'image/jpeg', 0.9)
+  }
+
+  const cerrarCamara = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    setShowCamera(false)
+  }
+
   return (
     <section className="admin-section">
       <div className="admin-card">
@@ -227,37 +271,57 @@ function AdminPanel() {
           </div>
 
           <div className="admin-photo-upload">
-            <label className="photo-upload-label">
-              {photoPreview ? (
-                <img src={photoPreview} alt="Foto" className="photo-preview" />
-              ) : (
-                <div className="photo-placeholder">
-                  <span>📷</span>
-                  <span>Foto</span>
+            {showCamera ? (
+              <div className="camera-preview">
+                <video ref={videoRef} className="camera-video" autoPlay playsInline />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div className="camera-actions">
+                  <button className="btn btn-primary" onClick={capturarFoto}>
+                    📸 Capturar
+                  </button>
+                  <button className="btn btn-outline" onClick={cerrarCamara}>
+                    Cancelar
+                  </button>
                 </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0]
-                  if (file) {
-                    setPhotoFile(file)
-                    setPhotoPreview(URL.createObjectURL(file))
-                  }
-                }}
-                style={{ display: 'none' }}
-              />
-            </label>
-            {photoPreview && (
-              <button
-                type="button"
-                className="btn btn-outline"
-                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
-              >
-                Quitar
-              </button>
+              </div>
+            ) : (
+              <>
+                <label className="photo-upload-label">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Foto" className="photo-preview" />
+                  ) : (
+                    <div className="photo-placeholder">
+                      <span>📷</span>
+                      <span>Foto</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0]
+                      if (file) {
+                        setPhotoFile(file)
+                        setPhotoPreview(URL.createObjectURL(file))
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <button type="button" className="btn btn-outline" onClick={abrirCamara} style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>
+                  📷 Tomar Foto
+                </button>
+                {photoPreview && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                    onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
+                  >
+                    Quitar
+                  </button>
+                )}
+              </>
             )}
           </div>
 
