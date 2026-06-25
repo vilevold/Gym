@@ -9,6 +9,8 @@ function AdminPanel() {
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [msg, setMsg] = useState({ type: '', text: '' })
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
 
   // Membership state
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -131,8 +133,29 @@ function AdminPanel() {
     setLoading(true)
     setMsg({})
 
+    let imagenUrl = null
+    if (photoFile) {
+      const fileName = `avatar_${Date.now()}_${codigoGenerado}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, photoFile, { contentType: photoFile.type, upsert: true })
+
+      if (uploadError) {
+        setMsg({ type: 'error', text: 'Error al subir foto: ' + uploadError.message })
+        setLoading(false)
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('fotos')
+        .getPublicUrl(fileName)
+
+      imagenUrl = urlData.publicUrl
+    }
+
     const insertData = { nombre: nombre.trim(), codigo: codigoGenerado }
     if (huellaId.trim()) insertData.huella_id = huellaId.trim()
+    if (imagenUrl) insertData.imagen = imagenUrl
 
     const { error } = await supabase
       .from('usuarios')
@@ -148,6 +171,8 @@ function AdminPanel() {
     setNombre('')
     setCodigoGenerado('')
     setHuellaId('')
+    setPhotoFile(null)
+    setPhotoPreview(null)
     setLoading(false)
     cargarUsuarios()
   }
@@ -199,6 +224,41 @@ function AdminPanel() {
             >
               {generating ? <span className="spinner"></span> : '🔄 Generar'}
             </button>
+          </div>
+
+          <div className="admin-photo-upload">
+            <label className="photo-upload-label">
+              {photoPreview ? (
+                <img src={photoPreview} alt="Foto" className="photo-preview" />
+              ) : (
+                <div className="photo-placeholder">
+                  <span>📷</span>
+                  <span>Foto</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0]
+                  if (file) {
+                    setPhotoFile(file)
+                    setPhotoPreview(URL.createObjectURL(file))
+                  }
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+            {photoPreview && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
+              >
+                Quitar
+              </button>
+            )}
           </div>
 
           {msg.text && (
@@ -346,7 +406,20 @@ function AdminPanel() {
                 usuarios.map((u) => (
                   <tr key={u.id}>
                     <td>{u.id}</td>
-                    <td>{u.nombre}</td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {u.imagen ? (
+                        <img src={u.imagen} alt={u.nombre} className="admin-thumb" />
+                      ) : (
+                        <div className="admin-thumb" style={{
+                          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.25))',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)'
+                        }}>
+                          {u.nombre?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                      {u.nombre}
+                    </td>
                     <td><span className="admin-badge-code">{u.codigo}</span></td>
                     <td>{u.huella_id || <span className="admin-no-photo">—</span>}</td>
                     <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
