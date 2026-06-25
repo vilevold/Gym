@@ -144,10 +144,11 @@ function AdminPanel() {
 
     let imagenUrl = null
     if (photoFile) {
-      const fileName = `avatar_${Date.now()}_${codigoGenerado}.jpg`
+      const webpFile = await convertirAWebP(photoFile)
+      const fileName = `avatar_${Date.now()}_${codigoGenerado}.webp`
       const { error: uploadError } = await supabase.storage
         .from('fotos')
-        .upload(fileName, photoFile, { contentType: photoFile.type, upsert: true })
+        .upload(fileName, webpFile, { contentType: 'image/webp', upsert: true })
 
       if (uploadError) {
         setMsg({ type: 'error', text: 'Error al subir foto: ' + uploadError.message })
@@ -184,6 +185,27 @@ function AdminPanel() {
     setPhotoPreview(null)
     setLoading(false)
     cargarUsuarios()
+  }
+
+  const convertirAWebP = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' }))
+          } else {
+            resolve(file)
+          }
+        }, 'image/webp', 0.85)
+      }
+      img.onerror = () => resolve(file)
+      img.src = URL.createObjectURL(file)
+    })
   }
 
   const abrirCamara = async () => {
