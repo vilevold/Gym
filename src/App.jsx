@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
 import AdminPanel from './AdminPanel'
+import InventoryPanel from './InventoryPanel'
+import UsersPanel from './UsersPanel'
+import AnnouncementsPanel from './AnnouncementsPanel'
+import FingerprintReader from './FingerprintReader'
+import MembresiaPanel from './MembresiaPanel'
 
 function App() {
   const [workouts, setWorkouts] = useState(0)
@@ -292,10 +297,15 @@ function App() {
             <span className="nav-user-name">{user?.nombre}</span>
           </li>
           <li><a href="#dashboard" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Dashboard</a></li>
+          <li><a href="#membresia" onClick={() => { setSection('membresia'); closeMobileMenu() }}>Membresía</a></li>
           {isAdmin && (
             <>
+              <li><a href="#asistencia" onClick={() => { setSection('fingerprint'); closeMobileMenu() }}>Asistencia</a></li>
               <li><a href="#clases" onClick={() => { setSection('clases'); closeMobileMenu() }}>Clases</a></li>
               <li><a href="#planes" onClick={() => { setSection('planes'); closeMobileMenu() }}>Planes</a></li>
+              <li><a href="#inventario" onClick={() => { setSection('inventario'); closeMobileMenu() }}>Inventario</a></li>
+              <li><a href="#usuarios" onClick={() => { setSection('usuarios'); closeMobileMenu() }}>Usuarios</a></li>
+              <li><a href="#anuncios" onClick={() => { setSection('anuncios'); closeMobileMenu() }}>Anuncios</a></li>
               <li><a href="#admin" className="nav-link-admin" onClick={() => { setSection('admin'); closeMobileMenu() }}>Admin Panel</a></li>
             </>
           )}
@@ -307,8 +317,18 @@ function App() {
         </ul>
       </nav>
 
-      {section === 'admin' ? (
+      {section === 'membresia' ? (
+        <MembresiaPanel user={user} />
+      ) : section === 'fingerprint' ? (
+        <FingerprintReader />
+      ) : section === 'admin' ? (
         <AdminPanel />
+      ) : section === 'inventario' ? (
+        <InventoryPanel />
+      ) : section === 'usuarios' ? (
+        <UsersPanel />
+      ) : section === 'anuncios' ? (
+        <AnnouncementsPanel />
       ) : section === 'clases' ? (
         <header className="hero">
           <span className="badge">📅 Clases</span>

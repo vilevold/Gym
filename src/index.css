@@ -981,3 +981,313 @@ body {
   }
 }
 
+/* Fingerprint Reader */
+.fingerprint-section {
+  max-width: 700px;
+}
+
+.fingerprint-card {
+  text-align: center;
+}
+
+.fingerprint-reader-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.fingerprint-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  width: 160px;
+  height: 160px;
+  cursor: pointer;
+  transition: var(--transition);
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.fingerprint-btn:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 30px var(--primary-glow-hover);
+  transform: scale(1.05);
+}
+
+.fingerprint-btn:active {
+  transform: scale(0.95);
+}
+
+.fingerprint-btn.scanning {
+  border-color: var(--primary);
+  animation: fingerprint-pulse 0.8s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes fingerprint-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--primary-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--primary), 0 0 80px var(--primary-glow);
+  }
+}
+
+.fingerprint-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.fingerprint-btn:hover .fingerprint-icon {
+  color: var(--primary);
+}
+
+.fingerprint-btn.scanning .fingerprint-icon {
+  color: var(--primary);
+  animation: fingerprint-glow 0.8s infinite ease-in-out;
+}
+
+@keyframes fingerprint-glow {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fingerprint-label {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: var(--transition);
+}
+
+.fingerprint-btn:hover .fingerprint-label {
+  color: var(--primary);
+}
+
+.fingerprint-btn.scanning .fingerprint-label {
+  color: var(--primary);
+}
+
+.fingerprint-result {
+  margin-top: 1.5rem;
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fingerprint-result-header {
+  margin-bottom: 1rem;
+}
+
+.fingerprint-user-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: var(--transition);
+}
+
+.fingerprint-user-card:hover {
+  border-color: var(--border-hover);
+}
+
+.fingerprint-user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.25) 100%);
+  border: 2px solid var(--border-color);
+  color: var(--primary);
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.fingerprint-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fingerprint-user-info {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.fingerprint-user-name {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.fingerprint-user-id {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.fingerprint-user-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Membresia Panel */
+.membresia-status {
+  margin-top: 1rem;
+}
+
+.membresia-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.membresia-hint {
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.membresia-info {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.membresia-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+}
+
+.membresia-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.membresia-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: var(--font-heading);
+}
+
+.membresia-divider {
+  height: 1px;
+  background: var(--border-color);
+}
+
+.membresia-activo {
+  color: var(--primary);
+}
+
+.membresia-vencido {
+  color: #fca5a5;
+}
+
+.membresia-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+}
+
+.badge-activo {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-vencido {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Admin Filters */
+.admin-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  font-family: var(--font-sans);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  flex: 1;
+  min-width: 180px;
+}
+
+.filter-input:focus {
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(148, 163, 184, 0.15), 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+
+.filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.filter-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-badge {
+  font-family: var(--font-sans);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.filter-badge:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-badge.active {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+

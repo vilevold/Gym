@@ -1,32 +1,23 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 
 function AdminPanel() {
   const [nombre, setNombre] = useState('')
   const [codigoGenerado, setCodigoGenerado] = useState('')
+  const [huellaId, setHuellaId] = useState('')
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [msg, setMsg] = useState({ type: '', text: '' })
 
-  // Camera state
-  const [showCamera, setShowCamera] = useState(false)
-  const [cameraReady, setCameraReady] = useState(false)
-  const [capturedImage, setCapturedImage] = useState(null)
-  const videoRef = useRef(null)
-  const canvasRef = useRef(null)
-  const streamRef = useRef(null)
+  // Membership state
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedUserMembresia, setSelectedUserMembresia] = useState(null)
+  const [loadingMembresia, setLoadingMembresia] = useState(false)
+  const [paying, setPaying] = useState(false)
 
   useEffect(() => {
     cargarUsuarios()
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-    }
   }, [])
 
   const cargarUsuarios = async () => {
@@ -34,49 +25,55 @@ function AdminPanel() {
     if (data) setUsuarios(data)
   }
 
-  const startCamera = async () => {
-    setShowCamera(true)
-    setCapturedImage(null)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 320, height: 240 }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      setCameraReady(true)
-    } catch (err) {
-      setMsg({ type: 'error', text: 'Error al acceder a la cámara: ' + err.message })
-      setShowCamera(false)
+  const calcularProximoPago = (ultimoPago) => {
+    const date = new Date(ultimoPago)
+    date.setMonth(date.getMonth() + 1)
+    return date
+  }
+
+  const isVencido = (ultimoPago) => {
+    const proximo = calcularProximoPago(ultimoPago)
+    return new Date() > proximo
+  }
+
+  const daysUntil = (ultimoPago) => {
+    const proximo = calcularProximoPago(ultimoPago)
+    const diff = proximo - new Date()
+    return Math.ceil(diff / (1000 * 60 * 60 * 24))
+  }
+
+  const cargarMembresiaUsuario = async (userId) => {
+    if (!userId) {
+      setSelectedUserMembresia(null)
+      return
     }
+    setLoadingMembresia(true)
+    const { data } = await supabase
+      .from('membresias')
+      .select('*')
+      .eq('usuario_id', userId)
+      .maybeSingle()
+    setSelectedUserMembresia(data || null)
+    setLoadingMembresia(false)
   }
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
+  const registrarPagoUsuario = async () => {
+    if (!selectedUserId) return
+    setPaying(true)
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
+      .from('membresias')
+      .upsert(
+        { usuario_id: Number(selectedUserId), ultimo_pago: now },
+        { onConflict: 'usuario_id' }
+      )
+      .select()
+      .single()
+    if (!error && data) {
+      setSelectedUserMembresia(data)
+      setMsg({ type: 'success', text: 'Pago registrado correctamente.' })
     }
-    setCameraReady(false)
-    setShowCamera(false)
-  }
-
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(video, 0, 0)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-    setCapturedImage(dataUrl)
-    stopCamera()
-  }
-
-  const retakePhoto = () => {
-    setCapturedImage(null)
-    startCamera()
+    setPaying(false)
   }
 
   const generarCodigo = async () => {
@@ -88,19 +85,28 @@ function AdminPanel() {
     setGenerating(true)
     setMsg({})
     setCodigoGenerado('')
+    setHuellaId('')
 
     let intentos = 0
     let code = ''
+    let fpId = ''
 
     while (intentos < 100) {
       code = String(Math.floor(1000 + Math.random() * 9000))
-      const { data } = await supabase
+      fpId = 'FP-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+      const { data: codeCheck } = await supabase
         .from('usuarios')
         .select('id')
         .eq('codigo', code)
         .maybeSingle()
 
-      if (!data) break
+      const { data: fpCheck } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('huella_id', fpId)
+        .maybeSingle()
+
+      if (!codeCheck && !fpCheck) break
       intentos++
     }
 
@@ -111,7 +117,8 @@ function AdminPanel() {
     }
 
     setCodigoGenerado(code)
-    setMsg({ type: 'success', text: `Código generado: ${code}` })
+    setHuellaId(fpId)
+    setMsg({ type: 'success', text: `Código: ${code} · Huella: ${fpId}` })
     setGenerating(false)
   }
 
@@ -121,39 +128,15 @@ function AdminPanel() {
       return
     }
 
-    if (!capturedImage) {
-      setMsg({ type: 'error', text: 'Toma una foto antes de guardar el usuario.' })
-      return
-    }
-
     setLoading(true)
     setMsg({})
 
-    let imagenUrl = null
-    try {
-      const res = await fetch(capturedImage)
-      const blob = await res.blob()
-      const fileName = `avatar_${Date.now()}_${codigoGenerado}.jpg`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
-
-      if (uploadError) throw new Error(uploadError.message)
-
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
-
-      imagenUrl = urlData.publicUrl
-    } catch (err) {
-      setMsg({ type: 'error', text: 'Error al subir la foto: ' + err.message })
-      setLoading(false)
-      return
-    }
+    const insertData = { nombre: nombre.trim(), codigo: codigoGenerado }
+    if (huellaId.trim()) insertData.huella_id = huellaId.trim()
 
     const { error } = await supabase
       .from('usuarios')
-      .insert({ nombre: nombre.trim(), codigo: codigoGenerado, imagen: imagenUrl })
+      .insert(insertData)
 
     if (error) {
       setMsg({ type: 'error', text: 'Error al guardar: ' + error.message })
@@ -164,7 +147,7 @@ function AdminPanel() {
     setMsg({ type: 'success', text: `Usuario "${nombre.trim()}" registrado con código ${codigoGenerado}.` })
     setNombre('')
     setCodigoGenerado('')
-    setCapturedImage(null)
+    setHuellaId('')
     setLoading(false)
     cargarUsuarios()
   }
@@ -199,6 +182,16 @@ function AdminPanel() {
                 readOnly
               />
             </div>
+            <div className="form-group code-input-group">
+              <label htmlFor="admin-huella">Huella ID (simulada)</label>
+              <input
+                id="admin-huella"
+                type="text"
+                value={huellaId}
+                placeholder="Se genera automáticamente"
+                readOnly
+              />
+            </div>
             <button
               className="btn btn-outline btn-generate"
               onClick={generarCodigo}
@@ -206,50 +199,6 @@ function AdminPanel() {
             >
               {generating ? <span className="spinner"></span> : '🔄 Generar'}
             </button>
-          </div>
-
-          {/* Camera Section */}
-          <div className="admin-camera-section">
-            {!showCamera && !capturedImage && (
-              <button
-                className="btn btn-outline btn-block"
-                onClick={startCamera}
-                disabled={loading || generating || !codigoGenerado}
-              >
-                📷 Tomar Foto
-              </button>
-            )}
-
-            {showCamera && (
-              <div className="camera-preview">
-                <video ref={videoRef} autoPlay playsInline className="camera-video" />
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-                <div className="camera-actions">
-                  <button
-                    className="btn btn-primary"
-                    onClick={capturePhoto}
-                    disabled={!cameraReady}
-                  >
-                    📸 Capturar
-                  </button>
-                  <button className="btn btn-outline" onClick={stopCamera}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {capturedImage && (
-              <div className="captured-preview">
-                <img src={capturedImage} alt="Foto capturada" className="captured-img" />
-                <div className="camera-actions">
-                  <span className="photo-done">Foto tomada ✓</span>
-                  <button className="btn btn-outline" onClick={retakePhoto}>
-                    🔄 Volver a tomar
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {msg.text && (
@@ -261,11 +210,120 @@ function AdminPanel() {
           <button
             className="btn btn-primary btn-block"
             onClick={guardarUsuario}
-            disabled={loading || generating || !codigoGenerado || !capturedImage}
+            disabled={loading || generating || !codigoGenerado}
           >
             {loading ? <><span className="spinner"></span> Guardando...</> : '💾 Guardar Usuario'}
           </button>
         </div>
+      </div>
+
+      <div className="admin-card">
+        <h2 className="admin-title" style={{ fontSize: '1.25rem' }}>Gestión de Membresías</h2>
+        <p className="admin-subtitle">Selecciona un usuario para ver y registrar sus pagos.</p>
+
+        <div className="admin-form" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'flex-end' }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="admin-mem-usuario">Usuario</label>
+            <select
+              id="admin-mem-usuario"
+              value={selectedUserId}
+              onChange={(e) => {
+                setSelectedUserId(e.target.value)
+                cargarMembresiaUsuario(e.target.value)
+              }}
+              style={{
+                fontFamily: 'var(--font-sans)',
+                background: 'rgba(0,0,0,0.4)',
+                border: '1px solid rgba(148,163,184,0.15)',
+                borderRadius: '10px',
+                padding: '0.9rem 1rem',
+                color: '#fff',
+                fontSize: '1rem',
+                width: '100%',
+                outline: 'none'
+              }}
+            >
+              <option value="">-- Seleccionar --</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>{u.nombre} ({u.codigo})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {selectedUserId && (
+          <div style={{ marginTop: '1rem' }}>
+            {loadingMembresia ? (
+              <div style={{ textAlign: 'center', padding: '1rem' }}>
+                <span className="spinner"></span> Cargando...
+              </div>
+            ) : !selectedUserMembresia ? (
+              <div className="membresia-empty" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                <p>Este usuario no tiene membresía registrada.</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={registrarPagoUsuario}
+                  disabled={paying}
+                  style={{ marginTop: '0.75rem' }}
+                >
+                  {paying ? <span className="spinner"></span> : '💳 Registrar primer pago'}
+                </button>
+              </div>
+            ) : (
+              <div className="membresia-info" style={{
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: 'var(--radius)',
+                padding: '1.25rem'
+              }}>
+                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Último pago</span>
+                  <span className="membresia-value" style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                    {new Date(selectedUserMembresia.ultimo_pago).toLocaleDateString('es-MX', {
+                      year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div style={{ height: '1px', background: 'var(--border-color)' }} />
+                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Próximo pago</span>
+                  <span style={{
+                    fontWeight: 700,
+                    color: isVencido(selectedUserMembresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)'
+                  }}>
+                    {calcularProximoPago(selectedUserMembresia.ultimo_pago).toLocaleDateString('es-MX', {
+                      year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div style={{ height: '1px', background: 'var(--border-color)' }} />
+                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Estado</span>
+                  <span style={{
+                    fontSize: '0.85rem', fontWeight: 700, padding: '0.3rem 0.8rem', borderRadius: '6px',
+                    background: isVencido(selectedUserMembresia.ultimo_pago)
+                      ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
+                    color: isVencido(selectedUserMembresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)',
+                    border: isVencido(selectedUserMembresia.ultimo_pago)
+                      ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)'
+                  }}>
+                    {isVencido(selectedUserMembresia.ultimo_pago)
+                      ? `Vencido (${Math.abs(daysUntil(selectedUserMembresia.ultimo_pago))}d)`
+                      : `Activo (${daysUntil(selectedUserMembresia.ultimo_pago)}d)`
+                    }
+                  </span>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={registrarPagoUsuario}
+                  disabled={paying}
+                  style={{ marginTop: '1rem', width: '100%' }}
+                >
+                  {paying ? <span className="spinner"></span> : '💳 Registrar pago'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="admin-card">
@@ -277,7 +335,7 @@ function AdminPanel() {
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Código</th>
-                <th>Foto</th>
+                <th>Huella ID</th>
                 <th>Creado</th>
               </tr>
             </thead>
@@ -290,13 +348,7 @@ function AdminPanel() {
                     <td>{u.id}</td>
                     <td>{u.nombre}</td>
                     <td><span className="admin-badge-code">{u.codigo}</span></td>
-                    <td>
-                      {u.imagen ? (
-                        <img src={u.imagen} alt={u.nombre} className="admin-thumb" />
-                      ) : (
-                        <span className="admin-no-photo">—</span>
-                      )}
-                    </td>
+                    <td>{u.huella_id || <span className="admin-no-photo">—</span>}</td>
                     <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
                   </tr>
                 ))
