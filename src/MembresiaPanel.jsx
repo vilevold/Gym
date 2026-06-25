@@ -12,6 +12,7 @@ function MembresiaPanel({ user }) {
   const [msg, setMsg] = useState({ type: '', text: '' })
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [paySearch, setPaySearch] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -95,106 +96,172 @@ function MembresiaPanel({ user }) {
 
   return (
     <section className="admin-section">
-      <div className="admin-card">
-        <h2 className="admin-title">Mi Membresía</h2>
+      {!isAdmin && (
+        <div className="admin-card">
+          <h2 className="admin-title">Mi Membresía</h2>
 
-        {msg.text && (
-          <div className={`alert ${msg.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
-            <span className="alert-text">{msg.text}</span>
-          </div>
-        )}
+          {msg.text && (
+            <div className={`alert ${msg.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
+              <span className="alert-text">{msg.text}</span>
+            </div>
+          )}
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <span className="spinner"></span> Cargando membresía...
-          </div>
-        ) : (
-          <div className="membresia-status">
-            {!membresia ? (
-              <div className="membresia-empty">
-                <p>Aún no tienes una membresía activa.</p>
-                <p className="membresia-hint">Espera a que el administrador registre tu pago.</p>
-              </div>
-            ) : (
-              <div className="membresia-info">
-                <div className="membresia-row">
-                  <span className="membresia-label">Último pago</span>
-                  <span className="membresia-value">
-                    {new Date(membresia.ultimo_pago).toLocaleDateString('es-MX', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </span>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <span className="spinner"></span> Cargando membresía...
+            </div>
+          ) : (
+            <div className="membresia-status">
+              {!membresia ? (
+                <div className="membresia-empty">
+                  <p>Aún no tienes una membresía activa.</p>
+                  <p className="membresia-hint">Espera a que el administrador registre tu pago.</p>
                 </div>
-                <div className="membresia-divider" />
-                <div className="membresia-row">
-                  <span className="membresia-label">Próximo pago</span>
-                  <span className={`membresia-value ${isVencido(membresia.ultimo_pago) ? 'membresia-vencido' : 'membresia-activo'}`}>
-                    {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </span>
+              ) : (
+                <div className="membresia-info">
+                  <div className="membresia-row">
+                    <span className="membresia-label">Último pago</span>
+                    <span className="membresia-value">
+                      {new Date(membresia.ultimo_pago).toLocaleDateString('es-MX', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="membresia-divider" />
+                  <div className="membresia-row">
+                    <span className="membresia-label">Próximo pago</span>
+                    <span className={`membresia-value ${isVencido(membresia.ultimo_pago) ? 'membresia-vencido' : 'membresia-activo'}`}>
+                      {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="membresia-divider" />
+                  <div className="membresia-row">
+                    <span className="membresia-label">Estado</span>
+                    <span className={`membresia-badge ${isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo'}`}>
+                      {isVencido(membresia.ultimo_pago)
+                        ? `Vencido (${Math.abs(daysUntil(membresia.ultimo_pago))} días de retraso)`
+                        : `Activo (${daysUntil(membresia.ultimo_pago)} días restantes)`
+                      }
+                    </span>
+                  </div>
                 </div>
-                <div className="membresia-divider" />
-                <div className="membresia-row">
-                  <span className="membresia-label">Estado</span>
-                  <span className={`membresia-badge ${isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo'}`}>
-                    {isVencido(membresia.ultimo_pago)
-                      ? `Vencido (${Math.abs(daysUntil(membresia.ultimo_pago))} días de retraso)`
-                      : `Activo (${daysUntil(membresia.ultimo_pago)} días restantes)`
-                    }
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {isAdmin && (
         <div className="admin-card">
           <h3 className="admin-title" style={{ fontSize: '1.25rem' }}>
             Registrar Pago para Usuario
           </h3>
-          <div className="admin-form" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'flex-end' }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label htmlFor="admin-select-user">Seleccionar usuario</label>
-              <select
-                id="admin-select-user"
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(148,163,184,0.15)',
-                  borderRadius: '10px',
-                  padding: '0.9rem 1rem',
-                  color: '#fff',
-                  fontSize: '1rem',
-                  width: '100%',
-                  outline: 'none'
-                }}
+
+          {selectedUserId ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Usuario seleccionado:
+              </span>
+              <span style={{
+                background: 'rgba(16,185,129,0.15)', color: 'var(--primary)',
+                padding: '0.3rem 0.8rem', borderRadius: '6px', fontWeight: 700,
+                border: '1px solid rgba(16,185,129,0.3)'
+              }}>
+                {usuarios.find(u => u.id === selectedUserId)?.nombre || '—'}
+              </span>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}
+                onClick={() => setSelectedUserId('')}
               >
-                <option value="">-- Selecciona un usuario --</option>
-                {usuarios.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nombre} ({u.codigo})</option>
-                ))}
-              </select>
+                Cambiar
+              </button>
             </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                if (!selectedUserId) {
-                  setMsg({ type: 'error', text: 'Selecciona un usuario.' })
-                  return
-                }
-                registrarPago(Number(selectedUserId))
-              }}
-              disabled={paying || !selectedUserId}
-              style={{ height: '44px', whiteSpace: 'nowrap' }}
-            >
-              {paying ? <span className="spinner"></span> : '💳 Registrar Pago'}
-            </button>
-          </div>
+          ) : (
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label htmlFor="admin-search-user">Buscar usuario</label>
+              <input
+                id="admin-search-user"
+                type="text"
+                className="filter-input"
+                placeholder="Escribe nombre o código..."
+                value={paySearch}
+                onChange={(e) => setPaySearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+          )}
+
+          {!selectedUserId && paySearch && (
+            <div style={{
+              background: 'rgba(0,0,0,0.3)', borderRadius: '10px',
+              border: '1px solid var(--border-color)', marginBottom: '1rem',
+              maxHeight: '200px', overflowY: 'auto'
+            }}>
+              {(() => {
+                const filtrados = usuarios.filter(u =>
+                  u.nombre.toLowerCase().includes(paySearch.toLowerCase()) ||
+                  u.codigo.toLowerCase().includes(paySearch.toLowerCase())
+                )
+                return filtrados.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No se encontraron usuarios.
+                  </div>
+                ) : (
+                  filtrados.map(u => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        width: '100%', padding: '0.75rem 1rem',
+                        background: 'transparent', border: 'none',
+                        borderBottom: '1px solid var(--border-color)',
+                        color: 'var(--text-main)', cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)', fontSize: '0.9rem',
+                        textAlign: 'left', transition: 'all 0.2s ease'
+                      }}
+                      onClick={() => {
+                        setSelectedUserId(u.id)
+                        setPaySearch('')
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(16,185,129,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div className="admin-thumb" style={{
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.25))',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)'
+                      }}>
+                        {u.nombre?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600 }}>{u.nombre}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.codigo}</div>
+                      </div>
+                    </button>
+                  ))
+                )
+              })()}
+            </div>
+          )}
+
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              if (!selectedUserId) {
+                setMsg({ type: 'error', text: 'Selecciona un usuario.' })
+                return
+              }
+              registrarPago(Number(selectedUserId))
+            }}
+            disabled={paying || !selectedUserId}
+            style={{ height: '44px', whiteSpace: 'nowrap', width: '100%' }}
+          >
+            {paying ? <span className="spinner"></span> : '💳 Registrar Pago'}
+          </button>
         </div>
       )}
 

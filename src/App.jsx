@@ -299,12 +299,12 @@ function App() {
           </li>
           <li><a href="#dashboard" onClick={() => { setSection('dashboard'); closeMobileMenu() }}>Dashboard</a></li>
           <li><a href="#membresia" onClick={() => { setSection('membresia'); closeMobileMenu() }}>Membresía</a></li>
+          <li><a href="#anuncios" onClick={() => { setSection('anuncios'); closeMobileMenu() }}>Anuncios</a></li>
           {isAdmin && (
             <>
               <li><a href="#asistencia" onClick={() => { setSection('fingerprint'); closeMobileMenu() }}>Asistencia</a></li>
               <li><a href="#inventario" onClick={() => { setSection('inventario'); closeMobileMenu() }}>Inventario</a></li>
               <li><a href="#usuarios" onClick={() => { setSection('usuarios'); closeMobileMenu() }}>Usuarios</a></li>
-              <li><a href="#anuncios" onClick={() => { setSection('anuncios'); closeMobileMenu() }}>Anuncios</a></li>
               <li><a href="#admin" className="nav-link-admin" onClick={() => { setSection('admin'); closeMobileMenu() }}>Admin Panel</a></li>
             </>
           )}
@@ -329,7 +329,7 @@ function App() {
       ) : section === 'usuarios' ? (
         <UsersPanel />
       ) : section === 'anuncios' ? (
-        <AnnouncementsPanel />
+        <AnnouncementsPanel user={user} />
       ) : null}
 
       {/* Footer */}

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 
-function AnnouncementsPanel() {
+function AnnouncementsPanel({ user }) {
+  const isAdmin = user?.codigo === '1212'
   const [anuncios, setAnuncios] = useState([])
   const [titulo, setTitulo] = useState('')
   const [contenido, setContenido] = useState('')
@@ -56,8 +57,9 @@ function AnnouncementsPanel() {
     <section className="admin-section">
       <div className="admin-card">
         <h2 className="admin-title">Anuncios</h2>
-        <p className="admin-subtitle">Crea y gestiona anuncios para los miembros del gimnasio.</p>
+        {isAdmin && <p className="admin-subtitle">Crea y gestiona anuncios para los miembros del gimnasio.</p>}
 
+        {isAdmin && (
         <form onSubmit={handleSubmit} className="admin-form">
           <div className="form-group">
             <label htmlFor="anun-titulo">Título</label>
@@ -106,46 +108,47 @@ function AnnouncementsPanel() {
             {loading ? <><span className="spinner"></span> Publicando...</> : 'Publicar Anuncio'}
           </button>
         </form>
+        )}
       </div>
 
       <div className="admin-card">
-        <h3 className="admin-title" style={{ fontSize: '1.25rem' }}>Anuncios Publicados ({anuncios.length})</h3>
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Contenido</th>
-                <th>Fecha</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {anuncios.length === 0 ? (
-                <tr><td colSpan="5" className="admin-empty">No hay anuncios publicados.</td></tr>
-              ) : (
-                anuncios.map((a) => (
-                  <tr key={a.id}>
-                    <td>{a.id}</td>
-                    <td>{a.titulo}</td>
-                    <td style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.contenido}</td>
-                    <td>{a.created_at ? new Date(a.created_at).toLocaleDateString() : '-'}</td>
-                    <td>
+        <h3 className="admin-title" style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Anuncios Publicados ({anuncios.length})</h3>
+
+        {anuncios.length === 0 ? (
+          <div className="admin-empty">No hay anuncios publicados.</div>
+        ) : (
+          <div className="anuncios-grid">
+            {anuncios.map((a, i) => (
+              <div key={a.id} className="anuncio-card" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div className="anuncio-card-accent"></div>
+                <div className="anuncio-card-body">
+                  <div className="anuncio-card-header">
+                    <h4 className="anuncio-card-title">{a.titulo}</h4>
+                    {isAdmin && (
                       <button
-                        className="btn btn-outline"
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                        className="anuncio-delete-btn"
                         onClick={() => eliminarAnuncio(a.id)}
+                        title="Eliminar anuncio"
                       >
-                        Eliminar
+                        ✕
                       </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                  </div>
+                  <p className="anuncio-card-content">{a.contenido}</p>
+                  <div className="anuncio-card-footer">
+                    <span className="anuncio-card-date">
+                      {a.created_at
+                        ? new Date(a.created_at).toLocaleDateString('es-MX', {
+                            year: 'numeric', month: 'long', day: 'numeric'
+                          })
+                        : '-'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
