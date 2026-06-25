@@ -9,6 +9,8 @@ function UsersPanel() {
   const [membresia, setMembresia] = useState(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [paying, setPaying] = useState(false)
+  const [previewImg, setPreviewImg] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const cargarUsuarios = async () => {
     setLoading(true)
@@ -70,9 +72,29 @@ function UsersPanel() {
   const isVencido = (ultimoPago) => new Date() > calcularProximoPago(ultimoPago)
   const daysUntil = (ultimoPago) => Math.ceil((calcularProximoPago(ultimoPago) - new Date()) / (1000 * 60 * 60 * 24))
 
+  const quitarMembresia = async () => {
+    if (!selectedUser || !confirm(`¿Quitar la membresía de "${selectedUser.nombre}"?`)) return
+    const { error } = await supabase.from('membresias').delete().eq('usuario_id', selectedUser.id)
+    if (!error) {
+      setMembresia(null)
+      setMsg({ type: 'success', text: 'Membresía eliminada.' })
+    }
+  }
+
   const getInitials = (name) => {
     if (!name) return '??'
     return name.split(' ').filter(Boolean).map(w => w[0]).join('').substring(0, 2).toUpperCase()
+  }
+
+  if (previewImg) {
+    return (
+      <div className="img-modal-overlay" onClick={() => setPreviewImg(null)}>
+        <div className="img-modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="img-modal-close" onClick={() => setPreviewImg(null)}>✕</button>
+          <img src={previewImg} alt="Foto" className="img-modal-img" />
+        </div>
+      </div>
+    )
   }
 
   if (selectedUser) {
@@ -88,7 +110,7 @@ function UsersPanel() {
           </button>
 
           <div className="perfil-header">
-            <div className="perfil-avatar">
+            <div className="perfil-avatar" onClick={() => selectedUser.imagen && setPreviewImg(selectedUser.imagen)} style={{ cursor: selectedUser.imagen ? 'pointer' : 'default' }}>
               {selectedUser.imagen ? (
                 <img src={selectedUser.imagen} alt={selectedUser.nombre} />
               ) : (
@@ -160,9 +182,14 @@ function UsersPanel() {
                   </span>
                 </div>
               </div>
-              <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ marginTop: '1rem' }}>
-                {paying ? <span className="spinner"></span> : '💳 Registrar pago'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button className="btn btn-primary" onClick={registrarPago} disabled={paying}>
+                  {paying ? <span className="spinner"></span> : '💳 Registrar pago'}
+                </button>
+                <button className="btn btn-outline" onClick={quitarMembresia} style={{ color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}>
+                  Quitar membresía
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -190,6 +217,15 @@ function UsersPanel() {
           </div>
         )}
 
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="Buscar por nombre..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ marginBottom: '1rem' }}
+        />
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <span className="spinner"></span> Cargando usuarios...
@@ -208,10 +244,14 @@ function UsersPanel() {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.length === 0 ? (
-                  <tr><td colSpan="6" className="admin-empty">No hay usuarios registrados.</td></tr>
-                ) : (
-                  usuarios.map((u) => (
+                {(() => {
+                  const filtrados = usuarios.filter(u =>
+                    !searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  return filtrados.length === 0 ? (
+                    <tr><td colSpan="6" className="admin-empty">No se encontraron usuarios.</td></tr>
+                  ) : (
+                    filtrados.map((u) => (
                     <tr
                       key={u.id}
                       style={{ cursor: 'pointer' }}
@@ -239,7 +279,8 @@ function UsersPanel() {
                       </td>
                     </tr>
                   ))
-                )}
+                )
+              })()}
               </tbody>
             </table>
           </div>

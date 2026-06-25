@@ -6,9 +6,10 @@ import UsersPanel from './UsersPanel'
 import AnnouncementsPanel from './AnnouncementsPanel'
 import FingerprintReader from './FingerprintReader'
 import MembresiaPanel from './MembresiaPanel'
+import Dashboard from './Dashboard'
 
 function App() {
-  const [workouts, setWorkouts] = useState(0)
+
   const [section, setSection] = useState('dashboard')
 
   // Estado de usuario para controlar la sesión (Opción 2)
@@ -301,8 +302,6 @@ function App() {
           {isAdmin && (
             <>
               <li><a href="#asistencia" onClick={() => { setSection('fingerprint'); closeMobileMenu() }}>Asistencia</a></li>
-              <li><a href="#clases" onClick={() => { setSection('clases'); closeMobileMenu() }}>Clases</a></li>
-              <li><a href="#planes" onClick={() => { setSection('planes'); closeMobileMenu() }}>Planes</a></li>
               <li><a href="#inventario" onClick={() => { setSection('inventario'); closeMobileMenu() }}>Inventario</a></li>
               <li><a href="#usuarios" onClick={() => { setSection('usuarios'); closeMobileMenu() }}>Usuarios</a></li>
               <li><a href="#anuncios" onClick={() => { setSection('anuncios'); closeMobileMenu() }}>Anuncios</a></li>
@@ -317,7 +316,9 @@ function App() {
         </ul>
       </nav>
 
-      {section === 'membresia' ? (
+      {section === 'dashboard' ? (
+        <Dashboard user={user} onNavigate={setSection} />
+      ) : section === 'membresia' ? (
         <MembresiaPanel user={user} />
       ) : section === 'fingerprint' ? (
         <FingerprintReader />
@@ -329,131 +330,7 @@ function App() {
         <UsersPanel />
       ) : section === 'anuncios' ? (
         <AnnouncementsPanel />
-      ) : section === 'clases' ? (
-        <header className="hero">
-          <span className="badge">📅 Clases</span>
-          <h1 className="hero-title">
-            Horario de <span>Clases</span>
-          </h1>
-          <p className="hero-subtitle">
-            Administra las disciplinas, horarios y entrenadores disponibles.
-          </p>
-          <div className="skeleton-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <div className="skeleton-card">
-              <div className="card-header">
-                <span className="card-icon">📅</span>
-                <span className="card-tag">Estructura</span>
-              </div>
-              <h3 className="card-title">Clases Semanales</h3>
-              <p className="card-description">
-                Aquí podrás gestionar el calendario de clases (CrossFit, Yoga, Zumba, etc.).
-              </p>
-              <div className="skeleton-bar-group">
-                <div className="skeleton-line active"></div>
-                <div className="skeleton-line third"></div>
-                <div className="skeleton-line half"></div>
-              </div>
-            </div>
-          </div>
-        </header>
-      ) : section === 'planes' ? (
-        <header className="hero">
-          <span className="badge">💳 Planes</span>
-          <h1 className="hero-title">
-            Planes de <span>Suscripción</span>
-          </h1>
-          <p className="hero-subtitle">
-            Administra los planes de membresía, precios y beneficios.
-          </p>
-          <div className="skeleton-grid" style={{ gridTemplateColumns: '1fr' }}>
-            <div className="skeleton-card">
-              <div className="card-header">
-                <span className="card-icon">💳</span>
-                <span className="card-tag">Diseño</span>
-              </div>
-              <h3 className="card-title">Suscripciones</h3>
-              <p className="card-description">
-                Aquí podrás gestionar los planes de membresía y precios.
-              </p>
-              <div className="skeleton-bar-group">
-                <div className="skeleton-line"></div>
-                <div className="skeleton-line active"></div>
-                <div className="skeleton-line half"></div>
-              </div>
-            </div>
-          </div>
-        </header>
-      ) : (
-        <header className="hero">
-          <span className="badge">Sesión iniciada como: {user.nombre} ({user.codigo})</span>
-          <h1 className="hero-title">
-            Tu próximo gran proyecto de <span>Fitness</span> comienza aquí
-          </h1>
-          <p className="hero-subtitle">
-            Un esqueleto de React limpio, optimizado y listo para agregar componentes y lógica de negocio.
-          </p>
-
-          <div className="skeleton-grid">
-            <div className="skeleton-card" id="dashboard">
-              <div className="card-header">
-                <span className="card-icon">🏋️‍♂️</span>
-                <span className="card-tag">Interactivo</span>
-              </div>
-              <h3 className="card-title">Registro de Rutinas</h3>
-              <p className="card-description">
-                Un componente reactivo simple para probar el estado y el HMR de React.
-              </p>
-              <div className="counter-box">
-                <button
-                  className="btn btn-outline"
-                  onClick={() => setWorkouts(Math.max(0, workouts - 1))}
-                >
-                  -
-                </button>
-                <span className="counter-value">{workouts}</span>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setWorkouts(workouts + 1)}
-                >
-                  + Rutina
-                </button>
-              </div>
-            </div>
-
-            <div className="skeleton-card" id="schedule">
-              <div className="card-header">
-                <span className="card-icon">📅</span>
-                <span className="card-tag">Estructura</span>
-              </div>
-              <h3 className="card-title">Clases Semanales</h3>
-              <p className="card-description">
-                Espacio reservado para el calendario interactivo de disciplinas (CrossFit, Yoga, Zumba).
-              </p>
-              <div className="skeleton-bar-group">
-                <div className="skeleton-line active"></div>
-                <div className="skeleton-line third"></div>
-                <div className="skeleton-line half"></div>
-              </div>
-            </div>
-
-            <div className="skeleton-card" id="pricing">
-              <div className="card-header">
-                <span className="card-icon">💳</span>
-                <span className="card-tag">Diseño</span>
-              </div>
-              <h3 className="card-title">Suscripciones</h3>
-              <p className="card-description">
-                Espacio reservado para la calculadora interactiva de membresías y pasarela de pago.
-              </p>
-              <div className="skeleton-bar-group">
-                <div className="skeleton-line"></div>
-                <div className="skeleton-line active"></div>
-                <div className="skeleton-line half"></div>
-              </div>
-            </div>
-          </div>
-        </header>
-      )}
+      ) : null}
 
       {/* Footer */}
       <footer className="footer">
