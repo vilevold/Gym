@@ -16,12 +16,6 @@ function AdminPanel() {
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Membership state
-  const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedUserMembresia, setSelectedUserMembresia] = useState(null)
-  const [loadingMembresia, setLoadingMembresia] = useState(false)
-  const [paying, setPaying] = useState(false)
-
   useEffect(() => {
     cargarUsuarios()
     return () => {
@@ -34,57 +28,6 @@ function AdminPanel() {
   const cargarUsuarios = async () => {
     const { data } = await supabase.from('usuarios').select('*').order('id', { ascending: false })
     if (data) setUsuarios(data)
-  }
-
-  const calcularProximoPago = (ultimoPago) => {
-    const date = new Date(ultimoPago)
-    date.setMonth(date.getMonth() + 1)
-    return date
-  }
-
-  const isVencido = (ultimoPago) => {
-    const proximo = calcularProximoPago(ultimoPago)
-    return new Date() > proximo
-  }
-
-  const daysUntil = (ultimoPago) => {
-    const proximo = calcularProximoPago(ultimoPago)
-    const diff = proximo - new Date()
-    return Math.ceil(diff / (1000 * 60 * 60 * 24))
-  }
-
-  const cargarMembresiaUsuario = async (userId) => {
-    if (!userId) {
-      setSelectedUserMembresia(null)
-      return
-    }
-    setLoadingMembresia(true)
-    const { data } = await supabase
-      .from('membresias')
-      .select('*')
-      .eq('usuario_id', userId)
-      .maybeSingle()
-    setSelectedUserMembresia(data || null)
-    setLoadingMembresia(false)
-  }
-
-  const registrarPagoUsuario = async () => {
-    if (!selectedUserId) return
-    setPaying(true)
-    const now = new Date().toISOString()
-    const { data, error } = await supabase
-      .from('membresias')
-      .upsert(
-        { usuario_id: Number(selectedUserId), ultimo_pago: now },
-        { onConflict: 'usuario_id' }
-      )
-      .select()
-      .single()
-    if (!error && data) {
-      setSelectedUserMembresia(data)
-      setMsg({ type: 'success', text: 'Pago registrado correctamente.' })
-    }
-    setPaying(false)
   }
 
   const generarCodigo = async () => {
@@ -370,114 +313,7 @@ function AdminPanel() {
         </div>
       </div>
 
-      <div className="admin-card">
-        <h2 className="admin-title" style={{ fontSize: '1.25rem' }}>Gestión de Membresías</h2>
-        <p className="admin-subtitle">Selecciona un usuario para ver y registrar sus pagos.</p>
 
-        <div className="admin-form" style={{ flexDirection: 'row', gap: '0.75rem', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label htmlFor="admin-mem-usuario">Usuario</label>
-            <select
-              id="admin-mem-usuario"
-              value={selectedUserId}
-              onChange={(e) => {
-                setSelectedUserId(e.target.value)
-                cargarMembresiaUsuario(e.target.value)
-              }}
-              style={{
-                fontFamily: 'var(--font-sans)',
-                background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(148,163,184,0.15)',
-                borderRadius: '10px',
-                padding: '0.9rem 1rem',
-                color: '#fff',
-                fontSize: '1rem',
-                width: '100%',
-                outline: 'none'
-              }}
-            >
-              <option value="">-- Seleccionar --</option>
-              {usuarios.map((u) => (
-                <option key={u.id} value={u.id}>{u.nombre} ({u.codigo})</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {selectedUserId && (
-          <div style={{ marginTop: '1rem' }}>
-            {loadingMembresia ? (
-              <div style={{ textAlign: 'center', padding: '1rem' }}>
-                <span className="spinner"></span> Cargando...
-              </div>
-            ) : !selectedUserMembresia ? (
-              <div className="membresia-empty" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-                <p>Este usuario no tiene membresía registrada.</p>
-                <button
-                  className="btn btn-primary"
-                  onClick={registrarPagoUsuario}
-                  disabled={paying}
-                  style={{ marginTop: '0.75rem' }}
-                >
-                  {paying ? <span className="spinner"></span> : '💳 Registrar primer pago'}
-                </button>
-              </div>
-            ) : (
-              <div className="membresia-info" style={{
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: 'var(--radius)',
-                padding: '1.25rem'
-              }}>
-                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
-                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Último pago</span>
-                  <span className="membresia-value" style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                    {new Date(selectedUserMembresia.ultimo_pago).toLocaleDateString('es-MX', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </span>
-                </div>
-                <div style={{ height: '1px', background: 'var(--border-color)' }} />
-                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
-                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Próximo pago</span>
-                  <span style={{
-                    fontWeight: 700,
-                    color: isVencido(selectedUserMembresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)'
-                  }}>
-                    {calcularProximoPago(selectedUserMembresia.ultimo_pago).toLocaleDateString('es-MX', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </span>
-                </div>
-                <div style={{ height: '1px', background: 'var(--border-color)' }} />
-                <div className="membresia-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
-                  <span className="membresia-label" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Estado</span>
-                  <span style={{
-                    fontSize: '0.85rem', fontWeight: 700, padding: '0.3rem 0.8rem', borderRadius: '6px',
-                    background: isVencido(selectedUserMembresia.ultimo_pago)
-                      ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-                    color: isVencido(selectedUserMembresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)',
-                    border: isVencido(selectedUserMembresia.ultimo_pago)
-                      ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)'
-                  }}>
-                    {isVencido(selectedUserMembresia.ultimo_pago)
-                      ? `Vencido (${Math.abs(daysUntil(selectedUserMembresia.ultimo_pago))}d)`
-                      : `Activo (${daysUntil(selectedUserMembresia.ultimo_pago)}d)`
-                    }
-                  </span>
-                </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={registrarPagoUsuario}
-                  disabled={paying}
-                  style={{ marginTop: '1rem', width: '100%' }}
-                >
-                  {paying ? <span className="spinner"></span> : '💳 Registrar pago'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       <div className="admin-card">
         <h3 className="admin-title" style={{ fontSize: '1.25rem' }}>Usuarios Registrados ({usuarios.length})</h3>
