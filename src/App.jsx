@@ -334,7 +334,7 @@ function App() {
 
       {/* Footer */}
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} GymPro. Desarrollado con React, Vite y Supabase.</p>
+        <p>&copy; {new Date().getFullYear()} Valhalla gym. Desarrollado por Carlos Aguilar.</p>
       </footer>
     </div>
   )
