@@ -191,17 +191,24 @@ function AdminPanel() {
     return new Promise((resolve) => {
       const img = new Image()
       img.onload = () => {
+        const MAX = 400
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
         const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        canvas.getContext('2d').drawImage(img, 0, 0)
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
         canvas.toBlob((blob) => {
           if (blob) {
             resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' }))
           } else {
             resolve(file)
           }
-        }, 'image/webp', 0.85)
+        }, 'image/webp', 0.75)
       }
       img.onerror = () => resolve(file)
       img.src = URL.createObjectURL(file)
