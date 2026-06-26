@@ -806,6 +806,14 @@ body {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.admin-table-row-clickable {
+  cursor: pointer;
+}
+
+.admin-table-row-clickable:hover {
+  background: rgba(16, 185, 129, 0.08) !important;
+}
+
 .admin-badge-code {
   background: var(--primary-glow);
   color: var(--primary);
@@ -858,6 +866,123 @@ body {
   .btn-generate {
     width: 100%;
   }
+}
+
+/* Admin User Modal */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.admin-modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.admin-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.admin-modal-close:hover {
+  color: var(--text-main);
+}
+
+.admin-modal-avatar img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(16, 185, 129, 0.3);
+}
+
+.admin-modal-avatar-initials {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.3));
+  border: 4px solid rgba(16, 185, 129, 0.3);
+}
+
+.admin-modal-name {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  margin: 0;
+}
+
+.admin-modal-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.admin-modal-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-modal-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-modal-value {
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.admin-modal-code {
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-glow);
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 1px;
 }
 
 /* Camera & Photo Styles */
@@ -1154,6 +1279,125 @@ body {
 }
 
 /* Membresia Panel */
+/* Membresia Cards Grid */
+.membresia-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.membresia-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.membresia-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.membresia-card--activo {
+  border-left: 4px solid var(--primary);
+}
+
+.membresia-card--vencido {
+  border-left: 4px solid #ef4444;
+}
+
+.membresia-card-avatar img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  flex-shrink: 0;
+}
+
+.membresia-card-initials {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.3));
+  flex-shrink: 0;
+}
+
+.membresia-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.membresia-card-name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.membresia-card-code {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-glow);
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.membresia-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.membresia-card-periodo {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.membresia-card-estado {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+.estado-activo {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--primary);
+}
+
+.estado-vencido {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
 .membresia-status {
   margin-top: 1rem;
 }
@@ -1398,6 +1642,153 @@ body {
 }
 
 /* Perfil */
+/* Users Section */
+.users-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.users-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-top: 0.35rem;
+}
+
+.users-empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+
+.user-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.user-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(16, 185, 129, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.user-card-avatar img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(16, 185, 129, 0.25);
+  flex-shrink: 0;
+}
+
+.user-card-initials {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.28));
+  flex-shrink: 0;
+}
+
+.user-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.user-card-name {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-card-code {
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-glow);
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.user-card-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.user-card-delete {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.user-card-delete:hover {
+  color: #fca5a5;
+}
+
+/* Modal wide variant */
+.admin-modal-card--wide {
+  max-width: 420px;
+}
+
+.admin-modal-divider {
+  height: 1px;
+  background: var(--border-color);
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.admin-modal-section {
+  width: 100%;
+}
+
+.admin-modal-section-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 0.5rem;
+}
+
 .perfil-header {
   display: flex;
   align-items: center;

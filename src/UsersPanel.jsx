@@ -37,13 +37,17 @@ function UsersPanel() {
   }
 
   const eliminarUsuario = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
+    if (!confirm('Estas seguro de eliminar este usuario?')) return
     const { error } = await supabase.from('usuarios').delete().eq('id', id)
     if (error) {
       setMsg({ type: 'error', text: 'Error al eliminar: ' + error.message })
       return
     }
-    setUsuarios(usuarios.filter(u => u.id !== id))
+    if (selectedUser?.id === id) {
+      setSelectedUser(null)
+      setMembresia(null)
+    }
+    await cargarUsuarios()
     setMsg({ type: 'success', text: 'Usuario eliminado correctamente.' })
   }
 
@@ -73,11 +77,11 @@ function UsersPanel() {
   const daysUntil = (ultimoPago) => Math.ceil((calcularProximoPago(ultimoPago) - new Date()) / (1000 * 60 * 60 * 24))
 
   const quitarMembresia = async () => {
-    if (!selectedUser || !confirm(`¿Quitar la membresía de "${selectedUser.nombre}"?`)) return
+    if (!selectedUser || !confirm('Quitar la membresia de "' + selectedUser.nombre + '"?')) return
     const { error } = await supabase.from('membresias').delete().eq('usuario_id', selectedUser.id)
     if (!error) {
       setMembresia(null)
-      setMsg({ type: 'success', text: 'Membresía eliminada.' })
+      setMsg({ type: 'success', text: 'Membresia eliminada.' })
     }
   }
 
@@ -97,122 +101,21 @@ function UsersPanel() {
     )
   }
 
-  if (selectedUser) {
-    return (
-      <section className="admin-section">
-        <div className="admin-card" style={{ position: 'relative' }}>
-          <button
-            className="btn btn-outline"
-            onClick={() => { setSelectedUser(null); setMembresia(null) }}
-            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-          >
-            ✕ Cerrar
-          </button>
-
-          <div className="perfil-header">
-            <div className="perfil-avatar" onClick={() => selectedUser.imagen && setPreviewImg(selectedUser.imagen)} style={{ cursor: selectedUser.imagen ? 'pointer' : 'default' }}>
-              {selectedUser.imagen ? (
-                <img src={selectedUser.imagen} alt={selectedUser.nombre} />
-              ) : (
-                getInitials(selectedUser.nombre)
-              )}
-            </div>
-            <div className="perfil-header-info">
-              <h2 className="admin-title" style={{ margin: 0 }}>{selectedUser.nombre}</h2>
-              <p className="admin-subtitle" style={{ margin: '0.25rem 0 0' }}>
-                Código: <span className="admin-badge-code">{selectedUser.codigo}</span>
-                {selectedUser.huella_id && <> · Huella: <span className="admin-badge-code">{selectedUser.huella_id}</span></>}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="admin-card">
-          <h3 className="admin-title" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Información general</h3>
-          <div className="perfil-grid">
-            <div className="perfil-field">
-              <span className="perfil-label">ID</span>
-              <span className="perfil-value">{selectedUser.id}</span>
-            </div>
-            <div className="perfil-field">
-              <span className="perfil-label">Código de acceso</span>
-              <span className="perfil-value"><span className="admin-badge-code">{selectedUser.codigo}</span></span>
-            </div>
-            <div className="perfil-field">
-              <span className="perfil-label">Huella digital</span>
-              <span className="perfil-value">{selectedUser.huella_id || 'No registrada'}</span>
-            </div>
-            <div className="perfil-field">
-              <span className="perfil-label">Registrado el</span>
-              <span className="perfil-value">{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="admin-card">
-          <h3 className="admin-title" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Membresía</h3>
-          {loadingProfile ? (
-            <div style={{ textAlign: 'center', padding: '1.5rem' }}><span className="spinner"></span></div>
-          ) : !membresia ? (
-            <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-              <p>Sin membresía registrada.</p>
-              <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ marginTop: '0.75rem' }}>
-                {paying ? <span className="spinner"></span> : '💳 Registrar primer pago'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div className="perfil-grid">
-                <div className="perfil-field">
-                  <span className="perfil-label">Último pago</span>
-                  <span className="perfil-value">{new Date(membresia.ultimo_pago).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                </div>
-                <div className="perfil-field">
-                  <span className="perfil-label">Próximo pago</span>
-                  <span className="perfil-value" style={{ color: isVencido(membresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)' }}>
-                    {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </span>
-                </div>
-                <div className="perfil-field">
-                  <span className="perfil-label">Estado</span>
-                  <span>
-                    <span className={`membresia-badge ${isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo'}`}>
-                      {isVencido(membresia.ultimo_pago) ? `Vencido (${Math.abs(daysUntil(membresia.ultimo_pago))}d)` : `Activo (${daysUntil(membresia.ultimo_pago)}d)`}
-                    </span>
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                <button className="btn btn-primary" onClick={registrarPago} disabled={paying}>
-                  {paying ? <span className="spinner"></span> : '💳 Registrar pago'}
-                </button>
-                <button className="btn btn-outline" onClick={quitarMembresia} style={{ color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}>
-                  Quitar membresía
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <button
-          className="btn btn-outline btn-block"
-          onClick={() => { setSelectedUser(null); setMembresia(null) }}
-          style={{ marginTop: '0.5rem' }}
-        >
-          ← Volver a lista de usuarios
-        </button>
-      </section>
-    )
-  }
-
   return (
     <section className="admin-section">
       <div className="admin-card">
-        <h2 className="admin-title">Usuarios</h2>
-        <p className="admin-subtitle">Lista completa de usuarios registrados en el sistema.</p>
+        <div className="users-header">
+          <div>
+            <h2 className="admin-title" style={{ margin: 0 }}>Usuarios</h2>
+            <p className="admin-subtitle" style={{ margin: '0.25rem 0 0' }}>
+              Lista completa de usuarios registrados en el sistema.
+            </p>
+          </div>
+          <span className="users-count">{usuarios.length} registrados</span>
+        </div>
 
         {msg.text && (
-          <div className={`alert ${msg.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
+          <div className={'alert ' + (msg.type === 'error' ? 'alert-danger' : 'alert-success')}>
             <span className="alert-text">{msg.text}</span>
           </div>
         )}
@@ -231,61 +134,156 @@ function UsersPanel() {
             <span className="spinner"></span> Cargando usuarios...
           </div>
         ) : (
-          <div className="admin-table-wrapper">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Código</th>
-                  <th>Foto</th>
-                  <th>Registrado</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const filtrados = usuarios.filter(u =>
-                    !searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  return filtrados.length === 0 ? (
-                    <tr><td colSpan="6" className="admin-empty">No se encontraron usuarios.</td></tr>
-                  ) : (
-                    filtrados.map((u) => (
-                    <tr
-                      key={u.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => verPerfil(u)}
-                    >
-                      <td>{u.id}</td>
-                      <td>{u.nombre}</td>
-                      <td><span className="admin-badge-code">{u.codigo}</span></td>
-                      <td>
+          (function() {
+            const filtrados = usuarios.filter(function(u) {
+              return !searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+            })
+            if (filtrados.length === 0) {
+              return (
+                <div className="users-empty">
+                  No se encontraron usuarios.
+                </div>
+              )
+            }
+            return (
+              <div className="users-grid">
+                {filtrados.map(function(u) {
+                  return (
+                    <div key={u.id} className="user-card" onClick={function() { verPerfil(u) }}>
+                      <div className="user-card-avatar">
                         {u.imagen ? (
-                          <img src={u.imagen} alt={u.nombre} className="admin-thumb" />
+                          <img src={u.imagen} alt={u.nombre} />
                         ) : (
-                          <span className="admin-no-photo">—</span>
+                          <div className="user-card-initials">
+                            {u.nombre ? u.nombre.charAt(0).toUpperCase() : '?'}
+                          </div>
                         )}
-                      </td>
-                      <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
-                      <td>
-                        <button
-                          className="btn btn-outline"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
-                          onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id) }}
-                        >
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )
-              })()}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <div className="user-card-info">
+                        <span className="user-card-name">{u.nombre}</span>
+                        <span className="user-card-code">{u.codigo}</span>
+                        <span className="user-card-date">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}
+                        </span>
+                      </div>
+                      <button
+                        className="user-card-delete"
+                        onClick={function(e) { e.stopPropagation(); eliminarUsuario(u.id) }}
+                        title="Eliminar usuario"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()
         )}
       </div>
+
+      {selectedUser && (
+        <div className="admin-modal-overlay" onClick={function() { setSelectedUser(null); setMembresia(null) }}>
+          <div className="admin-modal-card admin-modal-card--wide" onClick={function(e) { e.stopPropagation() }}>
+            <button className="admin-modal-close" onClick={function() { setSelectedUser(null); setMembresia(null) }}>&times;</button>
+
+            <div className="admin-modal-avatar">
+              {selectedUser.imagen ? (
+                <img src={selectedUser.imagen} alt={selectedUser.nombre} onClick={function() { setPreviewImg(selectedUser.imagen) }} style={{ cursor: 'pointer' }} />
+              ) : (
+                <div className="admin-modal-avatar-initials">
+                  {selectedUser.nombre ? selectedUser.nombre.charAt(0).toUpperCase() : '?'}
+                </div>
+              )}
+            </div>
+
+            <h2 className="admin-modal-name">{selectedUser.nombre}</h2>
+
+            <div className="admin-modal-details">
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">ID</span>
+                <span className="admin-modal-value">#{selectedUser.id}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Codigo</span>
+                <span className="admin-modal-value admin-modal-code">{selectedUser.codigo}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Huella ID</span>
+                <span className="admin-modal-value">{selectedUser.huella_id || '—'}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Registrado</span>
+                <span className="admin-modal-value">
+                  {selectedUser.created_at
+                    ? new Date(selectedUser.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : '-'}
+                </span>
+              </div>
+            </div>
+
+            <div className="admin-modal-divider" />
+
+            <div className="admin-modal-section">
+              <h4 className="admin-modal-section-title">Membresia</h4>
+              {loadingProfile ? (
+                <div style={{ textAlign: 'center', padding: '1rem' }}><span className="spinner"></span></div>
+              ) : !membresia ? (
+                <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Sin membresia activa.
+                  <br />
+                  <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ marginTop: '0.6rem', fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                    {paying ? <span className="spinner"></span> : 'Registrar primer pago'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="admin-modal-details">
+                    <div className="admin-modal-field">
+                      <span className="admin-modal-label">Ultimo pago</span>
+                      <span className="admin-modal-value">
+                        {new Date(membresia.ultimo_pago).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <div className="admin-modal-field">
+                      <span className="admin-modal-label">Proximo pago</span>
+                      <span className="admin-modal-value" style={{ color: isVencido(membresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)' }}>
+                        {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <div className="admin-modal-field">
+                      <span className="admin-modal-label">Estado</span>
+                      <span className={'membresia-badge ' + (isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo')}>
+                        {isVencido(membresia.ultimo_pago)
+                          ? 'Vencido (' + Math.abs(daysUntil(membresia.ultimo_pago)) + 'd)'
+                          : 'Activo (' + daysUntil(membresia.ultimo_pago) + 'd)'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ fontSize: '0.85rem', flex: 1 }}>
+                      {paying ? <span className="spinner"></span> : 'Renovar pago'}
+                    </button>
+                    <button className="btn btn-outline" onClick={quitarMembresia} style={{ fontSize: '0.85rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}>
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="admin-modal-divider" />
+
+            <button
+              className="btn btn-outline"
+              onClick={function() { eliminarUsuario(selectedUser.id) }}
+              style={{ width: '100%', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)', fontSize: '0.85rem' }}
+            >
+              Eliminar usuario
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

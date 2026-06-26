@@ -12,6 +12,7 @@ function AdminPanel() {
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [showCamera, setShowCamera] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -333,7 +334,7 @@ function AdminPanel() {
                 <tr><td colSpan="5" className="admin-empty">No hay usuarios registrados.</td></tr>
               ) : (
                 usuarios.map((u) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} className="admin-table-row-clickable" onClick={() => setSelectedUser(u)}>
                     <td>{u.id}</td>
                     <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {u.imagen ? (
@@ -359,6 +360,45 @@ function AdminPanel() {
           </table>
         </div>
       </div>
+
+      {selectedUser && (
+        <div className="admin-modal-overlay" onClick={() => setSelectedUser(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="admin-modal-close" onClick={() => setSelectedUser(null)}>&times;</button>
+
+            <div className="admin-modal-avatar">
+              {selectedUser.imagen ? (
+                <img src={selectedUser.imagen} alt={selectedUser.nombre} />
+              ) : (
+                <div className="admin-modal-avatar-initials">
+                  {selectedUser.nombre?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+
+            <h2 className="admin-modal-name">{selectedUser.nombre}</h2>
+
+            <div className="admin-modal-details">
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">ID</span>
+                <span className="admin-modal-value">#{selectedUser.id}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Código</span>
+                <span className="admin-modal-value admin-modal-code">{selectedUser.codigo}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Huella ID</span>
+                <span className="admin-modal-value">{selectedUser.huella_id || '—'}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Registrado</span>
+                <span className="admin-modal-value">{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString() : '-'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

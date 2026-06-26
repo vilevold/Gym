@@ -1,0 +1,1 @@
+ALTER TABLE membresias ADD COLUMN IF NOT EXISTS periodo TEXT NOT NULL DEFAULT 'month';

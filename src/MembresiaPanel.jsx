@@ -13,6 +13,8 @@ function MembresiaPanel({ user }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [paySearch, setPaySearch] = useState('')
+  const [selectedPeriodo, setSelectedPeriodo] = useState('month')
+  const [selectedMembresia, setSelectedMembresia] = useState(null)
 
   useEffect(() => {
     if (user) {
@@ -46,7 +48,7 @@ function MembresiaPanel({ user }) {
   const cargarUsuarios = async () => {
     const { data } = await supabase
       .from('usuarios')
-      .select('id, nombre, codigo')
+      .select('id, nombre, codigo, imagen')
       .order('nombre', { ascending: true })
     if (data) setUsuarios(data)
   }
@@ -60,7 +62,7 @@ function MembresiaPanel({ user }) {
     const { data, error } = await supabase
       .from('membresias')
       .upsert(
-        { usuario_id: usuarioId, ultimo_pago: now },
+        { usuario_id: usuarioId, ultimo_pago: now, periodo: selectedPeriodo },
         { onConflict: 'usuario_id' }
       )
       .select()
@@ -77,21 +79,44 @@ function MembresiaPanel({ user }) {
     setPaying(false)
   }
 
-  const calcularProximoPago = (ultimoPago) => {
-    const date = new Date(ultimoPago)
-    date.setMonth(date.getMonth() + 1)
-    return date
+  const sumarPeriodo = (date, periodo) => {
+    const d = new Date(date)
+    switch (periodo) {
+      case 'week': d.setDate(d.getDate() + 7); break
+      case '15days': d.setDate(d.getDate() + 15); break
+      case 'day': d.setDate(d.getDate() + 1); break
+      default: d.setMonth(d.getMonth() + 1); break
+    }
+    return d
   }
 
-  const isVencido = (ultimoPago) => {
-    const proximo = calcularProximoPago(ultimoPago)
+  const calcularProximoPago = (ultimoPago, periodo) => {
+    return sumarPeriodo(ultimoPago, periodo || 'month')
+  }
+
+  const isVencido = (ultimoPago, periodo) => {
+    const proximo = calcularProximoPago(ultimoPago, periodo)
     return new Date() > proximo
   }
 
-  const daysUntil = (ultimoPago) => {
-    const proximo = calcularProximoPago(ultimoPago)
+  const daysUntil = (ultimoPago, periodo) => {
+    const proximo = calcularProximoPago(ultimoPago, periodo)
     const diff = proximo - new Date()
     return Math.ceil(diff / (1000 * 60 * 60 * 24))
+  }
+
+  const quitarMembresia = async (usuarioId) => {
+    if (!confirm('¿Quitar la membresía de este usuario?')) return
+    const { error } = await supabase.from('membresias').delete().eq('usuario_id', usuarioId)
+    if (!error) {
+      setSelectedMembresia(null)
+      cargarTodas()
+    }
+  }
+
+  const periodoLabel = (p) => {
+    const labels = { month: 'Mensual', week: 'Semanal', '15days': 'Cada 15 días', day: 'Diario' }
+    return labels[p] || 'Mensual'
   }
 
   return (
@@ -120,6 +145,11 @@ function MembresiaPanel({ user }) {
               ) : (
                 <div className="membresia-info">
                   <div className="membresia-row">
+                    <span className="membresia-label">Periodo</span>
+                    <span className="membresia-value">{periodoLabel(membresia.periodo)}</span>
+                  </div>
+                  <div className="membresia-divider" />
+                  <div className="membresia-row">
                     <span className="membresia-label">Último pago</span>
                     <span className="membresia-value">
                       {new Date(membresia.ultimo_pago).toLocaleDateString('es-MX', {
@@ -130,8 +160,8 @@ function MembresiaPanel({ user }) {
                   <div className="membresia-divider" />
                   <div className="membresia-row">
                     <span className="membresia-label">Próximo pago</span>
-                    <span className={`membresia-value ${isVencido(membresia.ultimo_pago) ? 'membresia-vencido' : 'membresia-activo'}`}>
-                      {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', {
+                    <span className={`membresia-value ${isVencido(membresia.ultimo_pago, membresia.periodo) ? 'membresia-vencido' : 'membresia-activo'}`}>
+                      {calcularProximoPago(membresia.ultimo_pago, membresia.periodo).toLocaleDateString('es-MX', {
                         year: 'numeric', month: 'long', day: 'numeric'
                       })}
                     </span>
@@ -139,10 +169,10 @@ function MembresiaPanel({ user }) {
                   <div className="membresia-divider" />
                   <div className="membresia-row">
                     <span className="membresia-label">Estado</span>
-                    <span className={`membresia-badge ${isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo'}`}>
-                      {isVencido(membresia.ultimo_pago)
-                        ? `Vencido (${Math.abs(daysUntil(membresia.ultimo_pago))} días de retraso)`
-                        : `Activo (${daysUntil(membresia.ultimo_pago)} días restantes)`
+                    <span className={`membresia-badge ${isVencido(membresia.ultimo_pago, membresia.periodo) ? 'badge-vencido' : 'badge-activo'}`}>
+                      {isVencido(membresia.ultimo_pago, membresia.periodo)
+                        ? `Vencido (${Math.abs(daysUntil(membresia.ultimo_pago, membresia.periodo))} días de retraso)`
+                        : `Activo (${daysUntil(membresia.ultimo_pago, membresia.periodo)} días restantes)`
                       }
                     </span>
                   </div>
@@ -248,6 +278,27 @@ function MembresiaPanel({ user }) {
             </div>
           )}
 
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label>Periodo de membresía</label>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {[
+                { value: 'month', label: 'Mensual' },
+                { value: 'week', label: 'Semanal' },
+                { value: '15days', label: 'Cada 15 días' },
+                { value: 'day', label: 'Diario' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`filter-badge ${selectedPeriodo === opt.value ? 'active' : ''}`}
+                  onClick={() => setSelectedPeriodo(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -290,67 +341,118 @@ function MembresiaPanel({ user }) {
             </div>
           </div>
 
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Código</th>
-                <th>Último pago</th>
-                <th>Próximo pago</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                const filtradas = todas.filter((m) => {
+          {(() => {
+            const filtradas = todas.filter((m) => {
+              const userData = usuarios.find(u => u.id === m.usuario_id)
+              const name = (userData?.nombre || '').toLowerCase()
+              const matchSearch = !searchTerm || name.includes(searchTerm.toLowerCase())
+              const vencido = isVencido(m.ultimo_pago, m.periodo || 'month')
+              const matchStatus = filterStatus === 'all'
+                || (filterStatus === 'activo' && !vencido)
+                || (filterStatus === 'vencido' && vencido)
+              return matchSearch && matchStatus
+            })
+            return filtradas.length === 0 ? (
+              <div className="admin-empty" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                No se encontraron membresías.
+              </div>
+            ) : (
+              <div className="membresia-grid">
+                {filtradas.map((m) => {
+                  const p = m.periodo || 'month'
+                  const vencido = isVencido(m.ultimo_pago, p)
                   const userData = usuarios.find(u => u.id === m.usuario_id)
-                  const name = (userData?.nombre || '').toLowerCase()
-                  const matchSearch = !searchTerm || name.includes(searchTerm.toLowerCase())
-                  const vencido = isVencido(m.ultimo_pago)
-                  const matchStatus = filterStatus === 'all'
-                    || (filterStatus === 'activo' && !vencido)
-                    || (filterStatus === 'vencido' && vencido)
-                  return matchSearch && matchStatus
-                })
-                return filtradas.length === 0 ? (
-                  <tr><td colSpan="5" className="admin-empty">No se encontraron membresías.</td></tr>
-                ) : (
-                  filtradas.map((m) => {
-                    const vencido = isVencido(m.ultimo_pago)
-                    const userData = usuarios.find(u => u.id === m.usuario_id)
-                    return (
-                      <tr key={m.id}>
-                        <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div className="admin-thumb" style={{
-                            background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.25))',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)'
-                          }}>
+                  const days = daysUntil(m.ultimo_pago, p)
+                  return (
+                    <div
+                      key={m.id}
+                      className={`membresia-card ${vencido ? 'membresia-card--vencido' : 'membresia-card--activo'}`}
+                      onClick={() => setSelectedMembresia({ ...m, userData })}
+                    >
+                      <div className="membresia-card-avatar">
+                        {userData?.imagen ? (
+                          <img src={userData.imagen} alt={userData.nombre} />
+                        ) : (
+                          <div className="membresia-card-initials">
                             {userData?.nombre?.charAt(0)?.toUpperCase() || '?'}
                           </div>
-                          {userData?.nombre || '—'}
-                        </td>
-                        <td><span className="admin-badge-code">{userData?.codigo || '—'}</span></td>
-                        <td>{new Date(m.ultimo_pago).toLocaleDateString('es-MX')}</td>
-                        <td className={vencido ? 'membresia-vencido' : 'membresia-activo'}>
-                          {calcularProximoPago(m.ultimo_pago).toLocaleDateString('es-MX')}
-                        </td>
-                        <td>
-                          <span className={`membresia-badge ${vencido ? 'badge-vencido' : 'badge-activo'}`}>
-                            {vencido
-                              ? `Vencido (${Math.abs(daysUntil(m.ultimo_pago))}d)`
-                              : `Activo (${daysUntil(m.ultimo_pago)}d)`
-                            }
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )
-              })()}
-            </tbody>
-          </table>
+                        )}
+                      </div>
+                      <div className="membresia-card-info">
+                        <span className="membresia-card-name">{userData?.nombre || '—'}</span>
+                        <span className="membresia-card-code">{userData?.codigo || '—'}</span>
+                      </div>
+                      <div className="membresia-card-meta">
+                        <span className="membresia-card-periodo">{periodoLabel(p)}</span>
+                        <span className={`membresia-card-estado ${vencido ? 'estado-vencido' : 'estado-activo'}`}>
+                          {vencido ? `${Math.abs(days)}d vencido` : `${days}d restantes`}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
+      {selectedMembresia && (
+        <div className="admin-modal-overlay" onClick={() => setSelectedMembresia(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="admin-modal-close" onClick={() => setSelectedMembresia(null)}>&times;</button>
+
+            <div className="admin-modal-avatar">
+              {selectedMembresia.userData?.imagen ? (
+                <img src={selectedMembresia.userData.imagen} alt={selectedMembresia.userData.nombre} />
+              ) : (
+                <div className="admin-modal-avatar-initials">
+                  {selectedMembresia.userData?.nombre?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+
+            <h2 className="admin-modal-name">{selectedMembresia.userData?.nombre || '—'}</h2>
+
+            <div className="admin-modal-details">
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">ID</span>
+                <span className="admin-modal-value">#{selectedMembresia.usuario_id}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Código</span>
+                <span className="admin-modal-value admin-modal-code">{selectedMembresia.userData?.codigo || '—'}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Periodo</span>
+                <span className="admin-modal-value">{periodoLabel(selectedMembresia.periodo)}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Último pago</span>
+                <span className="admin-modal-value">{new Date(selectedMembresia.ultimo_pago).toLocaleDateString('es-MX')}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Próximo pago</span>
+                <span className="admin-modal-value">{calcularProximoPago(selectedMembresia.ultimo_pago, selectedMembresia.periodo).toLocaleDateString('es-MX')}</span>
+              </div>
+              <div className="admin-modal-field">
+                <span className="admin-modal-label">Estado</span>
+                <span className={`membresia-badge ${isVencido(selectedMembresia.ultimo_pago, selectedMembresia.periodo) ? 'badge-vencido' : 'badge-activo'}`}>
+                  {isVencido(selectedMembresia.ultimo_pago, selectedMembresia.periodo)
+                    ? `Vencido (${Math.abs(daysUntil(selectedMembresia.ultimo_pago, selectedMembresia.periodo))}d)`
+                    : `Activo (${daysUntil(selectedMembresia.ultimo_pago, selectedMembresia.periodo)}d)`
+                  }
+                </span>
+              </div>
+            </div>
+
+            <button
+              className="btn btn-outline"
+              onClick={() => quitarMembresia(selectedMembresia.usuario_id)}
+              style={{ width: '100%', marginTop: '0.5rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)', fontSize: '0.85rem' }}
+            >
+              Quitar membresía
+            </button>
           </div>
         </div>
       )}
