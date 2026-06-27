@@ -14,12 +14,16 @@ function Dashboard({ user, onNavigate }) {
     async function cargarDatos() {
       setLoading(true)
 
-      const [usuariosRes, membresiasRes, productosRes, anunciosRes, miMembresiaRes] = await Promise.all([
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+
+      const [usuariosRes, membresiasRes, productosRes, anunciosRes, miMembresiaRes, ventasRes] = await Promise.all([
         supabase.from('usuarios').select('*', { count: 'exact', head: true }),
         supabase.from('membresias').select('*'),
         supabase.from('productos').select('*'),
         supabase.from('anuncios').select('*', { count: 'exact', head: true }),
-        !isAdmin ? supabase.from('membresias').select('*').eq('usuario_id', user.id).maybeSingle() : Promise.resolve({ data: null })
+        !isAdmin ? supabase.from('membresias').select('*').eq('usuario_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+        isAdmin ? supabase.from('ventas').select('*').gte('created_at', hoy.toISOString()) : Promise.resolve({ data: [] })
       ])
 
       const totalUsers = usuariosRes.count ?? 0
@@ -36,11 +40,15 @@ function Dashboard({ user, onNavigate }) {
       const totalMembresias = membresiasRes.data?.length ?? 0
       const bajoStock = (productosRes.data || []).filter(p => p.cantidad <= 20).length
 
-      setStats({ totalUsers, activas, totalMembresias, totalProductos, bajoStock, totalAnuncios })
+      const ventasHoy = ventasRes.data || []
+      const ventasHoyTotal = ventasHoy.reduce((s, v) => s + Number(v.total), 0)
+      const ventasHoyCount = ventasHoy.length
+
+      setStats({ totalUsers, activas, totalMembresias, totalProductos, bajoStock, totalAnuncios, ventasHoyTotal, ventasHoyCount })
       if (miMembresiaRes.data) setMembresia(miMembresiaRes.data)
       setLoading(false)
 
-      animateCounts({ totalUsers, activas, totalProductos, bajoStock, totalAnuncios })
+      animateCounts({ totalUsers, activas, totalProductos, bajoStock, totalAnuncios, ventasHoyCount })
     }
 
     function animateCounts(targets) {
@@ -167,6 +175,13 @@ function Dashboard({ user, onNavigate }) {
               value={counts.totalAnuncios ?? 0}
               label="Anuncios"
               final={stats?.totalAnuncios}
+            />
+            <StatCard
+              type="sales"
+              icon="💰"
+              value={`L${stats?.ventasHoyTotal?.toFixed(2) ?? '0.00'}`}
+              label={`Ventas Hoy (${stats?.ventasHoyCount ?? 0})`}
+              final={stats?.ventasHoyTotal}
             />
           </>
         ) : (
@@ -326,6 +341,7 @@ function StatCard({ type, icon, value, label, barValue, barLabel, highlight }) {
     products: { bar: 'linear-gradient(90deg, #8b5cf6, #a78bfa)', icon: '#8b5cf6' },
     stock: { bar: 'linear-gradient(90deg, #f59e0b, #fbbf24)', icon: '#f59e0b' },
     announcements: { bar: 'linear-gradient(90deg, #ec4899, #f472b6)', icon: '#ec4899' },
+    sales: { bar: 'linear-gradient(90deg, #f59e0b, #f97316)', icon: '#f59e0b' },
   }
 
   const colors = colorMap[type] || colorMap.users

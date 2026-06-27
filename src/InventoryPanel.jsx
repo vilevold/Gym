@@ -12,6 +12,12 @@ function InventoryPanel() {
   const [editingId, setEditingId] = useState(null)
   const [editCantidad, setEditCantidad] = useState('')
   const [msg, setMsg] = useState({ type: '', text: '' })
+  const [showVenderModal, setShowVenderModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCategoria, setFilterCategoria] = useState('')
+  const [venderProducto, setVenderProducto] = useState(null)
+  const [venderCantidad, setVenderCantidad] = useState(1)
+  const [loadingVenta, setLoadingVenta] = useState(false)
 
   const categorias = ['General', 'Suplementos', 'Bebidas', 'Otro']
 
@@ -101,8 +107,50 @@ function InventoryPanel() {
     }
   }
 
+  const handleVender = async (e) => {
+    e.preventDefault()
+    if (!venderProducto) return
+    if (venderCantidad < 1 || venderCantidad > venderProducto.cantidad) {
+      setMsg({ type: 'error', text: 'Cantidad inválida.' })
+      return
+    }
+
+    setLoadingVenta(true)
+    const total = (parseFloat(venderProducto.precio) || 0) * venderCantidad
+
+    const { error: ventaError } = await supabase.from('ventas').insert({
+      producto_id: venderProducto.id,
+      producto_nombre: venderProducto.nombre,
+      cantidad: venderCantidad,
+      precio_unitario: parseFloat(venderProducto.precio) || 0,
+      total
+    })
+
+    if (ventaError) {
+      setMsg({ type: 'error', text: 'Error al registrar venta: ' + ventaError.message })
+      setLoadingVenta(false)
+      return
+    }
+
+    const nuevaCantidad = venderProducto.cantidad - venderCantidad
+    await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', venderProducto.id)
+
+    setItems(items.map(i => i.id === venderProducto.id ? { ...i, cantidad: nuevaCantidad } : i))
+    setMsg({ type: 'success', text: `Venta registrada: ${venderCantidad}x ${venderProducto.nombre} — L${total.toFixed(2)}` })
+    setShowVenderModal(false)
+    setVenderProducto(null)
+    setVenderCantidad(1)
+    setLoadingVenta(false)
+  }
+
+  const itemsFiltrados = items.filter(item => {
+    const matchNombre = item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchCategoria = !filterCategoria || item.categoria === filterCategoria
+    return matchNombre && matchCategoria
+  })
+
   return (
-    <section className="admin-section">
+    <section className="admin-section admin-section-wide">
       <div className="admin-card">
         <h2 className="admin-title">Inventario</h2>
         <p className="admin-subtitle">Gestiona los productos y existencias del gimnasio.</p>
@@ -146,14 +194,14 @@ function InventoryPanel() {
               </select>
             </div>
             <div className="form-group code-input-group">
-              <label htmlFor="inv-precio">Precio ($)</label>
+              <label htmlFor="inv-precio">Precio (L)</label>
               <input
                 id="inv-precio"
                 type="number"
                 step="0.01"
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
-                placeholder="0.00"
+                placeholder="L0.00"
                 min="0"
                 disabled={loading}
               />
@@ -197,7 +245,22 @@ function InventoryPanel() {
       </div>
 
       <div className="admin-card">
-        <h3 className="admin-title" style={{ fontSize: '1.25rem' }}>Productos ({items.length})</h3>
+        <h3 className="admin-title" style={{ fontSize: '1.25rem' }}>Productos ({itemsFiltrados.length})</h3>
+        <div className="admin-filters">
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="Buscar producto..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+          <div className="filter-badges">
+            <button className={`filter-badge ${!filterCategoria ? 'active' : ''}`} onClick={() => setFilterCategoria('')}>Todas</button>
+            {categorias.map(c => (
+              <button key={c} className={`filter-badge ${filterCategoria === c ? 'active' : ''}`} onClick={() => setFilterCategoria(c)}>{c}</button>
+            ))}
+          </div>
+        </div>
         <div className="admin-table-wrapper">
           <table className="admin-table">
             <thead>
@@ -211,10 +274,10 @@ function InventoryPanel() {
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? (
-                <tr><td colSpan="6" className="admin-empty">No hay productos registrados.</td></tr>
+              {itemsFiltrados.length === 0 ? (
+                <tr><td colSpan="6" className="admin-empty">{items.length === 0 ? 'No hay productos registrados.' : 'No se encontraron productos.'}</td></tr>
               ) : (
-                items.map((item) => (
+                itemsFiltrados.map((item) => (
                   <tr key={item.id}>
                     <td>{item.id}</td>
                     <td>
@@ -226,7 +289,7 @@ function InventoryPanel() {
                       )}
                     </td>
                     <td><span className="admin-badge-code" style={{ fontSize: '0.75rem' }}>{item.categoria}</span></td>
-                    <td>${Number(item.precio).toFixed(2)}</td>
+                    <td>L{Number(item.precio).toFixed(2)}</td>
                     <td>
                       <div className="stock-control">
                         <button className="stock-btn" onClick={() => ajustarStock(item, -1)} disabled={item.cantidad <= 0}>−</button>
@@ -255,13 +318,23 @@ function InventoryPanel() {
                       </div>
                     </td>
                     <td>
-                      <button
-                        className="btn btn-outline"
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
-                        onClick={() => eliminarProducto(item.id, item.nombre)}
-                      >
-                        Eliminar
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--primary)', borderColor: 'rgba(16,185,129,0.4)' }}
+                          onClick={() => { setVenderProducto(item); setVenderCantidad(1); setShowVenderModal(true) }}
+                          disabled={item.cantidad <= 0}
+                        >
+                          Vender
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                          onClick={() => eliminarProducto(item.id, item.nombre)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -270,6 +343,38 @@ function InventoryPanel() {
           </table>
         </div>
       </div>
+
+      {/* Modal Vender */}
+      {showVenderModal && venderProducto && (
+        <div className="admin-modal-overlay" onClick={() => setShowVenderModal(false)}>
+          <div className="admin-modal-card" onClick={e => e.stopPropagation()}>
+            <button className="admin-modal-close" onClick={() => setShowVenderModal(false)}>×</button>
+            <h3 className="admin-title" style={{ fontSize: '1.2rem', textAlign: 'center' }}>Vender</h3>
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              {venderProducto.nombre} — <strong>Stock: {venderProducto.cantidad}</strong>
+            </p>
+            <form onSubmit={handleVender} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Cantidad a vender</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={venderProducto.cantidad}
+                  value={venderCantidad}
+                  onChange={e => setVenderCantidad(Math.min(parseInt(e.target.value) || 1, venderProducto.cantidad))}
+                />
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>
+                Total: L${((parseFloat(venderProducto.precio) || 0) * venderCantidad).toFixed(2)}
+              </div>
+              <button type="submit" className="btn btn-primary btn-block" disabled={loadingVenta || venderCantidad < 1}>
+                {loadingVenta ? <><span className="spinner"></span> Registrando...</> : 'Confirmar Venta'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </section>
   )
 }

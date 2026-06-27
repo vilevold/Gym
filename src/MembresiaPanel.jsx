@@ -329,19 +329,61 @@ function MembresiaPanel({ user }) {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <div className="filter-badges">
-              {['all', 'activo', 'vencido'].map((f) => (
+              {['all', 'activo', 'vencido', 'sin'].map((f) => (
                 <button
                   key={f}
                   className={`filter-badge ${filterStatus === f ? 'active' : ''}`}
                   onClick={() => setFilterStatus(f)}
                 >
-                  {f === 'all' ? 'Todos' : f === 'activo' ? 'Activos' : 'Vencidos'}
+                  {f === 'all' ? 'Todos' : f === 'activo' ? 'Activos' : f === 'vencido' ? 'Vencidos' : 'Sin membresía'}
                 </button>
               ))}
             </div>
           </div>
 
           {(() => {
+            if (filterStatus === 'sin') {
+              const userIdsConMembresia = new Set(todas.map(m => m.usuario_id))
+              const sinMembresia = usuarios.filter(u => !userIdsConMembresia.has(u.id))
+              const filtrados = sinMembresia.filter(u =>
+                !searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              return filtrados.length === 0 ? (
+                <div className="admin-empty" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  {sinMembresia.length === 0 ? 'Todos los usuarios tienen membresía.' : 'No se encontraron usuarios.'}
+                </div>
+              ) : (
+                <div className="membresia-grid">
+                  {filtrados.map((u) => (
+                    <div
+                      key={u.id}
+                      className="membresia-card"
+                      style={{ borderLeft: '4px solid var(--text-muted)', cursor: 'default' }}
+                    >
+                      <div className="membresia-card-avatar">
+                        {u.imagen ? (
+                          <img src={u.imagen} alt={u.nombre} />
+                        ) : (
+                          <div className="membresia-card-initials" style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)' }}>
+                            {u.nombre?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="membresia-card-info">
+                        <span className="membresia-card-name">{u.nombre}</span>
+                        <span className="membresia-card-code">{u.codigo}</span>
+                      </div>
+                      <div className="membresia-card-meta">
+                        <span className="membresia-card-estado" style={{ background: 'rgba(148,163,184,0.15)', color: 'var(--text-muted)' }}>
+                          Sin membresía
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+
             const filtradas = todas.filter((m) => {
               const userData = usuarios.find(u => u.id === m.usuario_id)
               const name = (userData?.nombre || '').toLowerCase()
