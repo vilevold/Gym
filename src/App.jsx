@@ -5,6 +5,7 @@ import InventoryPanel from './InventoryPanel'
 import UsersPanel from './UsersPanel'
 import AnnouncementsPanel from './AnnouncementsPanel'
 import SalesPanel from './SalesPanel'
+import PagosMembresiaPanel from './PagosMembresiaPanel'
 import FingerprintReader from './FingerprintReader'
 import MembresiaPanel from './MembresiaPanel'
 import Dashboard from './Dashboard'
@@ -306,6 +307,7 @@ function App() {
               <li><a href="#asistencia" onClick={() => { setSection('fingerprint'); closeMobileMenu() }}>Asistencia</a></li>
               <li><a href="#inventario" onClick={() => { setSection('inventario'); closeMobileMenu() }}>Inventario</a></li>
               <li><a href="#ventas" onClick={() => { setSection('ventas'); closeMobileMenu() }}>Ventas</a></li>
+              <li><a href="#pagos-membresia" onClick={() => { setSection('pagos-membresia'); closeMobileMenu() }}>Membresias Pagadas</a></li>
               <li><a href="#usuarios" onClick={() => { setSection('usuarios'); closeMobileMenu() }}>Usuarios</a></li>
               <li><a href="#admin" className="nav-link-admin" onClick={() => { setSection('admin'); closeMobileMenu() }}>Admin Panel</a></li>
             </>
@@ -330,6 +332,8 @@ function App() {
         <InventoryPanel />
       ) : section === 'ventas' ? (
         <SalesPanel />
+      ) : section === 'pagos-membresia' ? (
+        <PagosMembresiaPanel />
       ) : section === 'usuarios' ? (
         <UsersPanel />
       ) : section === 'anuncios' ? (

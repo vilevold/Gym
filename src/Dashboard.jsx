@@ -17,13 +17,14 @@ function Dashboard({ user, onNavigate }) {
       const hoy = new Date()
       hoy.setHours(0, 0, 0, 0)
 
-      const [usuariosRes, membresiasRes, productosRes, anunciosRes, miMembresiaRes, ventasRes] = await Promise.all([
+      const [usuariosRes, membresiasRes, productosRes, anunciosRes, miMembresiaRes, ventasRes, pagosRes] = await Promise.all([
         supabase.from('usuarios').select('*', { count: 'exact', head: true }),
         supabase.from('membresias').select('*'),
         supabase.from('productos').select('*'),
         supabase.from('anuncios').select('*', { count: 'exact', head: true }),
         !isAdmin ? supabase.from('membresias').select('*').eq('usuario_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-        isAdmin ? supabase.from('ventas').select('*').gte('created_at', hoy.toISOString()) : Promise.resolve({ data: [] })
+        isAdmin ? supabase.from('ventas').select('*').gte('created_at', hoy.toISOString()) : Promise.resolve({ data: [] }),
+        isAdmin ? supabase.from('pagos_membresia').select('*').gte('created_at', hoy.toISOString()) : Promise.resolve({ data: [] })
       ])
 
       const totalUsers = usuariosRes.count ?? 0
@@ -44,11 +45,15 @@ function Dashboard({ user, onNavigate }) {
       const ventasHoyTotal = ventasHoy.reduce((s, v) => s + Number(v.total), 0)
       const ventasHoyCount = ventasHoy.length
 
-      setStats({ totalUsers, activas, totalMembresias, totalProductos, bajoStock, totalAnuncios, ventasHoyTotal, ventasHoyCount })
+      const pagosHoy = pagosRes.data || []
+      const pagosHoyTotal = pagosHoy.reduce((s, p) => s + Number(p.precio), 0)
+      const pagosHoyCount = pagosHoy.length
+
+      setStats({ totalUsers, activas, totalMembresias, totalProductos, bajoStock, totalAnuncios, ventasHoyTotal, ventasHoyCount, pagosHoyTotal, pagosHoyCount })
       if (miMembresiaRes.data) setMembresia(miMembresiaRes.data)
       setLoading(false)
 
-      animateCounts({ totalUsers, activas, totalProductos, bajoStock, totalAnuncios, ventasHoyCount })
+      animateCounts({ totalUsers, activas, totalProductos, bajoStock, totalAnuncios, ventasHoyCount, pagosHoyCount })
     }
 
     function animateCounts(targets) {
@@ -92,6 +97,8 @@ function Dashboard({ user, onNavigate }) {
     { key: 'membresia', label: 'Membresía', icon: '💳', adminOnly: false },
     { key: 'fingerprint', label: 'Asistencia', icon: '🖐️', adminOnly: true },
     { key: 'inventario', label: 'Inventario', icon: '📦', adminOnly: true },
+    { key: 'ventas', label: 'Ventas', icon: '💰', adminOnly: true },
+    { key: 'pagos-membresia', label: 'Memb. Pagadas', icon: '💳', adminOnly: true },
     { key: 'usuarios', label: 'Usuarios', icon: '👥', adminOnly: true },
     { key: 'anuncios', label: 'Anuncios', icon: '📢', adminOnly: true },
     { key: 'admin', label: 'Admin Panel', icon: '⚙️', adminOnly: true },
@@ -182,6 +189,13 @@ function Dashboard({ user, onNavigate }) {
               value={`L${stats?.ventasHoyTotal?.toFixed(2) ?? '0.00'}`}
               label={`Ventas Hoy (${stats?.ventasHoyCount ?? 0})`}
               final={stats?.ventasHoyTotal}
+            />
+            <StatCard
+              type="payments"
+              icon="💳"
+              value={`L${stats?.pagosHoyTotal?.toFixed(2) ?? '0.00'}`}
+              label={`Memb. Pagadas Hoy (${stats?.pagosHoyCount ?? 0})`}
+              final={stats?.pagosHoyTotal}
             />
           </>
         ) : (
@@ -342,6 +356,7 @@ function StatCard({ type, icon, value, label, barValue, barLabel, highlight }) {
     stock: { bar: 'linear-gradient(90deg, #f59e0b, #fbbf24)', icon: '#f59e0b' },
     announcements: { bar: 'linear-gradient(90deg, #ec4899, #f472b6)', icon: '#ec4899' },
     sales: { bar: 'linear-gradient(90deg, #f59e0b, #f97316)', icon: '#f59e0b' },
+    payments: { bar: 'linear-gradient(90deg, #06b6d4, #22d3ee)', icon: '#06b6d4' },
   }
 
   const colors = colorMap[type] || colorMap.users

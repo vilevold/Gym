@@ -11,6 +11,7 @@ function UsersPanel() {
   const [paying, setPaying] = useState(false)
   const [previewImg, setPreviewImg] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedPeriodo, setSelectedPeriodo] = useState('month')
 
   const cargarUsuarios = async () => {
     setLoading(true)
@@ -51,30 +52,47 @@ function UsersPanel() {
     setMsg({ type: 'success', text: 'Usuario eliminado correctamente.' })
   }
 
+  const precioPeriodo = (periodo) => {
+    const precios = { month: 450, week: 150, '15days': 250, day: 50 }
+    return precios[periodo] || 0
+  }
+
   const registrarPago = async () => {
     if (!selectedUser) return
     setPaying(true)
     const now = new Date().toISOString()
     const { data, error } = await supabase
       .from('membresias')
-      .upsert({ usuario_id: selectedUser.id, ultimo_pago: now }, { onConflict: 'usuario_id' })
+      .upsert({ usuario_id: selectedUser.id, ultimo_pago: now, periodo: selectedPeriodo }, { onConflict: 'usuario_id' })
       .select()
       .single()
     if (!error && data) {
       setMembresia(data)
+      await supabase.from('pagos_membresia').insert({
+        usuario_id: selectedUser.id,
+        usuario_nombre: selectedUser.nombre || 'Usuario',
+        periodo: selectedPeriodo,
+        precio: precioPeriodo(selectedPeriodo)
+      })
       setMsg({ type: 'success', text: 'Pago registrado.' })
     }
     setPaying(false)
   }
 
-  const calcularProximoPago = (ultimoPago) => {
-    const date = new Date(ultimoPago)
-    date.setMonth(date.getMonth() + 1)
-    return date
+  const sumarPeriodo = (date, periodo) => {
+    const d = new Date(date)
+    switch (periodo) {
+      case 'week': d.setDate(d.getDate() + 7); break
+      case '15days': d.setDate(d.getDate() + 15); break
+      case 'day': d.setDate(d.getDate() + 1); break
+      default: d.setMonth(d.getMonth() + 1); break
+    }
+    return d
   }
 
-  const isVencido = (ultimoPago) => new Date() > calcularProximoPago(ultimoPago)
-  const daysUntil = (ultimoPago) => Math.ceil((calcularProximoPago(ultimoPago) - new Date()) / (1000 * 60 * 60 * 24))
+  const calcularProximoPago = (ultimoPago, periodo) => sumarPeriodo(ultimoPago, periodo || 'month')
+  const isVencido = (ultimoPago, periodo) => new Date() > calcularProximoPago(ultimoPago, periodo)
+  const daysUntil = (ultimoPago, periodo) => Math.ceil((calcularProximoPago(ultimoPago, periodo) - new Date()) / (1000 * 60 * 60 * 24))
 
   const quitarMembresia = async () => {
     if (!selectedUser || !confirm('Quitar la membresia de "' + selectedUser.nombre + '"?')) return
@@ -229,10 +247,32 @@ function UsersPanel() {
               {loadingProfile ? (
                 <div style={{ textAlign: 'center', padding: '1rem' }}><span className="spinner"></span></div>
               ) : !membresia ? (
-                <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  Sin membresia activa.
-                  <br />
-                  <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ marginTop: '0.6rem', fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                <div>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0.5rem 0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    Sin membresia activa.
+                  </div>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem', display: 'block' }}>Periodo</label>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {[
+                        { value: 'month', label: 'Mensual' },
+                        { value: 'week', label: 'Semanal' },
+                        { value: '15days', label: '15 d\u00edas' },
+                        { value: 'day', label: 'Diario' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`filter-badge ${selectedPeriodo === opt.value ? 'active' : ''}`}
+                          onClick={() => setSelectedPeriodo(opt.value)}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
                     {paying ? <span className="spinner"></span> : 'Registrar primer pago'}
                   </button>
                 </div>
@@ -247,20 +287,41 @@ function UsersPanel() {
                     </div>
                     <div className="admin-modal-field">
                       <span className="admin-modal-label">Proximo pago</span>
-                      <span className="admin-modal-value" style={{ color: isVencido(membresia.ultimo_pago) ? '#fca5a5' : 'var(--primary)' }}>
-                        {calcularProximoPago(membresia.ultimo_pago).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      <span className="admin-modal-value" style={{ color: isVencido(membresia.ultimo_pago, membresia.periodo) ? '#fca5a5' : 'var(--primary)' }}>
+                        {calcularProximoPago(membresia.ultimo_pago, membresia.periodo).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </span>
                     </div>
                     <div className="admin-modal-field">
                       <span className="admin-modal-label">Estado</span>
-                      <span className={'membresia-badge ' + (isVencido(membresia.ultimo_pago) ? 'badge-vencido' : 'badge-activo')}>
-                        {isVencido(membresia.ultimo_pago)
-                          ? 'Vencido (' + Math.abs(daysUntil(membresia.ultimo_pago)) + 'd)'
-                          : 'Activo (' + daysUntil(membresia.ultimo_pago) + 'd)'}
+                      <span className={'membresia-badge ' + (isVencido(membresia.ultimo_pago, membresia.periodo) ? 'badge-vencido' : 'badge-activo')}>
+                        {isVencido(membresia.ultimo_pago, membresia.periodo)
+                          ? 'Vencido (' + Math.abs(daysUntil(membresia.ultimo_pago, membresia.periodo)) + 'd)'
+                          : 'Activo (' + daysUntil(membresia.ultimo_pago, membresia.periodo) + 'd)'}
                       </span>
                     </div>
+                    </div>
+                  <div style={{ marginBottom: '0.75rem', marginTop: '0.75rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem', display: 'block' }}>Periodo</label>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {[
+                        { value: 'month', label: 'Mensual' },
+                        { value: 'week', label: 'Semanal' },
+                        { value: '15days', label: '15 d\u00edas' },
+                        { value: 'day', label: 'Diario' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`filter-badge ${selectedPeriodo === opt.value ? 'active' : ''}`}
+                          onClick={() => setSelectedPeriodo(opt.value)}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-primary" onClick={registrarPago} disabled={paying} style={{ fontSize: '0.85rem', flex: 1 }}>
                       {paying ? <span className="spinner"></span> : 'Renovar pago'}
                     </button>

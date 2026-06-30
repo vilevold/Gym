@@ -53,6 +53,11 @@ function MembresiaPanel({ user }) {
     if (data) setUsuarios(data)
   }
 
+  const precioPeriodo = (periodo) => {
+    const precios = { month: 450, week: 150, '15days': 250, day: 50 }
+    return precios[periodo] || 0
+  }
+
   const registrarPago = async (usuarioId) => {
     setPaying(true)
     setMsg({})
@@ -71,6 +76,13 @@ function MembresiaPanel({ user }) {
     if (error) {
       setMsg({ type: 'error', text: 'Error al registrar pago: ' + error.message })
     } else {
+      const userData = usuarios.find(u => u.id === usuarioId)
+      await supabase.from('pagos_membresia').insert({
+        usuario_id: usuarioId,
+        usuario_nombre: userData?.nombre || 'Usuario',
+        periodo: selectedPeriodo,
+        precio: precioPeriodo(selectedPeriodo)
+      })
       if (usuarioId === user.id) setMembresia(data)
       if (isAdmin) cargarTodas()
       setMsg({ type: 'success', text: 'Pago registrado correctamente.' })
